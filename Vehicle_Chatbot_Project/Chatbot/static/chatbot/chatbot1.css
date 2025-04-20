@@ -1,0 +1,176 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #0e0d2b;
+    color: #ffffff;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    background-color: #1a1a40;
+    border-bottom: 1px solid #2c2c54;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #bbb;
+    font-size: 14px;
+    margin-left: 20px;
+}
+
+.chat-box h1 {
+    font-size: 55px;
+    margin-top: 5px;
+    margin-bottom: -20px;
+    background: linear-gradient(to right, #a66cff, #915eff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+}
+
+.chat-box p {
+    font-size: 22px;
+    color: #ddd;
+    text-align: center;
+    font-weight: bold;
+}
+
+.chat-box {
+    flex: 1;
+    padding-left: 50px;
+    padding-right: 50px;
+    overflow-y: auto;
+    background-color: #1a1a40;
+    display: flex;
+    flex-direction: column;
+    gap: 10px; 
+}
+
+.chat-input {
+    display: flex;
+    padding: 20px;
+    background-color: #1a1a40;
+    border-top: 1px solid #2c2c54;
+}
+
+#user-input {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #2c2c54;
+    border-radius: 4px 0 0 4px;
+    font-size: 16px;
+    background-color: #1a1a40;
+    color: #ffffff;
+}
+
+
+.chat-message {
+    max-width: 70%;
+    padding: 12px 20px;
+    border-radius: 20px;
+    font-size: 16px;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+/* Bot message styling */
+.chat-message.bot {
+    background-color: #2c2c54; 
+    color: #ffffff;
+    align-self: flex-start; 
+    border-top-left-radius: 0;
+}
+
+/* User message styling */
+.chat-message.user {
+    background-color: #6f42c1; 
+    color: #ffffff;
+    align-self: flex-end; 
+    border-top-right-radius: 0; 
+}
+
+button {
+    padding: 12px 24px;
+    background: linear-gradient(to right, #a66cff, #6f42c1);
+    color: #fff;
+    border: none;
+    border-radius: 0 4px 4px 0;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+button:hover {
+    background: linear-gradient(to right, #c084fc, #8b5cf6);
+}
+
+.start-button {
+    width: 200px;
+    border-radius: 5px;
+    padding: 10px 20px;
+    background: linear-gradient(to right, #a66cff, #6f42c1);
+    color: #fff;
+}
+
+.start-button:hover {
+    background: linear-gradient(to right, #c084fc, #8b5cf6);
+}
+
+
+.options-container {
+    display: contents;
+}
+
+.option-button {
+    padding: 10px 20px;
+    font-size: 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 200px;
+}
+
+.option-button:hover {
+    background: linear-gradient(to right, #8b5cf6, #c084fc);
+}
+
+.vehicle-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    color: #ffffff;
+    background-color: #1a1a40;
+}
+
+.vehicle-table th, .vehicle-table td {
+    border: 1px solid #2c2c54;
+    padding: 10px;
+    text-align: left;
+}
+
+.vehicle-table th {
+    background-color: #6f42c1;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.vehicle-table tr:nth-child(even) {
+    background-color: #2c2c54;
+}
+
+.vehicle-table tr:nth-child(odd) {
+    background-color: #1a1a40;
+}

@@ -1,0 +1,13 @@
+pandas
+openpyxl
+langchain
+langchain-ollama
+faiss-cpu
+numpy
+scikit-learn
+langchain-community
+transformers 
+sentence-transformers
+
+django
+markdown2

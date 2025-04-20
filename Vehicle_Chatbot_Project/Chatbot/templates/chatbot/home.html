@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <title>VROOMbot | Your AI Vehicle Advisor</title>
+    <link rel="stylesheet" href="{% static 'chatbot/home.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="left">
+            <h5>AI-POWERED VEHICLE EXPERT</h5>
+            <h1>Meet VROOMbot<br>Your Smart Car Companion</h1>
+            <p>Looking to buy your next vehicle? VROOMbot helps you explore, compare, predict prices, and get personalized recommendations – all through natural conversation. Let’s drive your car buying journey into the future!</p>
+            <a href="{% url 'default_chatbot' %}" class="button">LET’S START</a>
+            <div class="stats">
+                <div><h2>2000</h2><p>Vehicles nearly</p></div>
+                <div><h2>99%</h2><p>Successful Sales</p></div>
+            </div>
+        </div>
+        <div class="right">
+            <img src="{% static 'img/robot.png' %}" alt="VROOMbot">
+            <div class="speech pink">Hello. My name is VROOMbot. Let’s talk?</div>
+            <div class="speech beige">Hey VROOMbot. Tell me what can you do?</div>
+            <div class="speech purple">I can tell you many interesting facts.<br>To get started, click on <a href="{% url 'default_chatbot' %}">Let’s Start!</a></div>
+        </div>
+    </div>
+</body>
+</html>

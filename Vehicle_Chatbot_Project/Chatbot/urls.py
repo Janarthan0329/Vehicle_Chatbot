@@ -1,0 +1,9 @@
+from django.urls import path
+from .views import vehicle_query_view, default_chatbot_view, home_view, get_vehicle_table_view
+
+urlpatterns = [
+    path('query/', vehicle_query_view, name='vehicle_query'),
+    path('chatbot/', default_chatbot_view, name='default_chatbot'), 
+    path('', home_view, name='home'),
+    path('get_vehicle_table/', get_vehicle_table_view, name='get_vehicle_table'),
+]

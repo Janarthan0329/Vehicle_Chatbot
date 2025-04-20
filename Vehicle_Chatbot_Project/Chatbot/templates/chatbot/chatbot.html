@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VROOMbot | Your AI Vehicle Advisor</title>
+    <link rel="stylesheet" href="{% static 'chatbot/chatbot1.css' %}">
+</head>
+<body>
+    <nav>
+        <div class="logo">VROOMbot</div>
+        <div class="nav-links">
+            <a>+94 51789658</a>
+            <a>vroombot@gmail.com</a>
+            <a>Info</a>
+        </div>
+    </nav>
+    <div class="chat-box" id="chat-box">
+        <h1>Ask me about vehicles!</h1>
+        <p>Get instant answers to your vehicle-related questions.</p>
+        <!-- Messages will be injected here -->
+    </div>
+    <div class="chat-input">
+        <input type="text" id="user-input" placeholder="Ask about any vehicle..." />
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script src="{% static 'chatbot/chatbot.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #0e0d2b; 
+    color: #ffffff;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.left {
+    width: 50%;
+    padding-left: 50px;
+}
+
+.left h5 {
+    letter-spacing: 1px;
+    font-weight: 500;
+    color: #bbb;
+}
+
+.left h1 {
+    font-size: 48px;
+    margin: 20px 0;
+    background: linear-gradient(to right, #a66cff, #915eff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.left p {
+    font-size: 16px;
+    color: #aaa;
+    margin-bottom: 20px;
+}
+
+.button {
+    display: inline-block;
+    background: linear-gradient(to right, #a66cff, #6f42c1);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    margin-bottom: 40px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.button:hover {
+    background: linear-gradient(to right, #c084fc, #8b5cf6);
+    transform: translateY(-2px);
+}
+
+.stats {
+    display: flex;
+    gap: 50px;
+    margin-top: 30px;
+}
+
+.stats h2 {
+    font-size: 36px;
+    margin: 0;
+    color: #ffffff;
+}
+
+.stats p {
+    font-size: 14px;
+    color: #bbb;
+}
+
+.right {
+    width: 45%;
+    position: relative;
+}
+
+.right img {
+    width: 100%;
+    max-width: 400px;
+}
+
+.speech {
+    position: absolute;
+    padding: 12px 18px;
+    border-radius: 12px;
+    font-size: 14px;
+    width: max-content;
+    max-width: 220px;
+    box-shadow: 0 0 20px rgba(162, 89, 255, 0.2);
+    color: #fff;
+    font-weight: 500;
+}
+
+.pink {
+    background: #a855f7;
+    top: 10%;
+    left: 50%;
+}
+
+.beige {
+    background: #6f42c1;
+    top: 35%;
+    left: 45%;
+}
+
+.purple {
+    background: #4c1d95;
+    top: 65%;
+    left: 55%;
+}
+
+.purple a {
+    color: #d8b4fe;
+    text-decoration: underline;
+}
