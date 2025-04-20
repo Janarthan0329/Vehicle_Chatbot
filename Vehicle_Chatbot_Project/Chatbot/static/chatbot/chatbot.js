@@ -23,6 +23,22 @@ document.addEventListener("DOMContentLoaded", () => {
     message3.textContent = "Welcome! I am VROOMbot! How can I assist you today?";
     chatBox.appendChild(message3);
 
+    // Fourth welcome message
+    const message4 = document.createElement('div');
+    message4.className = 'chat-message bot';
+    message4.innerHTML = "Just type <a href='#' id='options-link' style='color: yellow; font-size: 1.2em; text-decoration: none;'>'Options'</a> anywhere to access easy options to get started!";
+    chatBox.appendChild(message4);
+
+    // Add event listener to the hyperlink
+    const optionsLink = document.getElementById('options-link');
+    optionsLink.addEventListener('click', (event) => {
+        event.preventDefault(); // Prevent the default hyperlink behavior
+        const startButton = document.querySelector('.start-button');
+        if (startButton && startButton.onclick) {
+            startButton.onclick(); // Trigger the same logic as the "Let's get started!" button
+        }
+    });
+
     // Add "Let's get started!" button
     const startButton = document.createElement('button');
     startButton.className = 'start-button';
@@ -95,12 +111,139 @@ document.addEventListener("DOMContentLoaded", () => {
                         } else {
                             appendBotMessage(data.message || 'No vehicles found.');
                         }
+                        
                     })
                     .catch(error => {
                         console.error('Error:', error);
                         chatBox.removeChild(loadingIndicator);
                         appendBotMessage('An error occurred. Please try again later.');
                     });
+                } else if (option === "Filter Vehicles") {
+                    // Define the filter fields and filters globally
+                    const filterFields = ['brand', 'model', 'fuel_type', 'transmission'];
+                    const filters = {};
+                    let currentFilterIndex = 0;
+                
+                    // Define the event listener function globally
+                    const handleKeyPress = (e) => {
+                        if (e.key === 'Enter') {
+                            const value = userInput.value.trim();
+                            userInput.value = '';
+                            if (value) {
+                                const field = filterFields[currentFilterIndex];
+                                filters[field] = value;
+                    
+                                // Display user input
+                                const userMessage = document.createElement('div');
+                                userMessage.className = 'chat-message user';
+                                userMessage.textContent = value;
+                                chatBox.appendChild(userMessage);
+                    
+                                // Move to the next filter field
+                                askForFilter(currentFilterIndex + 1);
+                            }
+                        }
+                    };
+                
+                    // Function to ask for filter inputs
+                    const askForFilter = (index) => {
+                        currentFilterIndex = index;
+                
+                        if (index >= filterFields.length) {
+                            console.log('Filters being sent:', filters);
+                            fetch('/filter/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': getCSRFToken(),
+                                },
+                                body: JSON.stringify({ filters }),
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                console.log('Server Response:', data);
+                                chatBox.removeChild(loadingIndicator);
+                        
+                                if (data.status === "success" && data.response) {
+                                    const vehicles = data.response;
+                        
+                                    if (typeof vehicles === "string") {
+                                        const botResponse = document.createElement('div');
+                                        botResponse.className = 'chat-message bot';
+                                        botResponse.textContent = vehicles;
+                                        chatBox.appendChild(botResponse);
+                                    } else {
+                                        const table = document.createElement('table');
+                                        table.className = 'vehicle-table';
+                        
+                                        const headerRow = document.createElement('tr');
+                                        ['Brand', 'Model', 'Category', 'Fuel Type', 'Transmission', 'Year', 'Mileage'].forEach(header => {
+                                            const th = document.createElement('th');
+                                            th.textContent = header;
+                                            headerRow.appendChild(th);
+                                        });
+                                        table.appendChild(headerRow);
+                        
+                                        vehicles.forEach(vehicle => {
+                                            const row = document.createElement('tr');
+                                            ['brand', 'model', 'category', 'fuel_type', 'transmission', 'year', 'mileage'].forEach(key => {
+                                                const td = document.createElement('td');
+                                                td.textContent = vehicle[key] || 'N/A';
+                                                row.appendChild(td);
+                                            });
+                                            table.appendChild(row);
+                                        });
+                        
+                                        const botResponse = document.createElement('div');
+                                        botResponse.className = 'chat-message bot';
+                                        botResponse.appendChild(table);
+                                        chatBox.appendChild(botResponse);
+                                    }
+                                } else {
+                                    const botResponse = document.createElement('div');
+                                    botResponse.className = 'chat-message bot';
+                                    botResponse.textContent = 'No vehicles match the filters.';
+                                    chatBox.appendChild(botResponse);
+                                }
+                        
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                const botResponse = document.createElement('div');
+                                botResponse.className = 'chat-message bot';
+                                botResponse.textContent = 'An error occurred. Please try again later.';
+                                chatBox.appendChild(botResponse);
+                            });
+                            return;
+                        }
+                
+                        // Ask for the next filter field
+                        const field = filterFields[index];
+                        const botResponse = document.createElement('div');
+                        botResponse.className = 'chat-message bot';
+                        botResponse.textContent = `Please enter a value for ${field}:`;
+                        chatBox.appendChild(botResponse);
+                
+                        // Remove any existing event listener
+                        userInput.removeEventListener('keypress', handleKeyPress);
+                
+                        // Add the new event listener
+                        userInput.addEventListener('keypress', handleKeyPress);
+                    };
+                
+                    // Trigger the "Filter Vehicles" functionality
+                    const startFilterVehicles = () => {
+                        // Reset filters and index
+                        Object.keys(filters).forEach(key => delete filters[key]);
+                        currentFilterIndex = 0;
+                
+                        // Start asking for filters
+                        askForFilter(0);
+                    };
+                
+                    // Start the filtering process
+                    startFilterVehicles();
                 } else if (option === "Let's Chat") {
                     userInput.focus(); 
                     loadingIndicator.remove(); 
@@ -135,7 +278,7 @@ const renderVehicleTable = (chatBox, vehicles) => {
 
     // Create table header
     const headerRow = document.createElement('tr');
-    ['ID', 'Brand', 'Model', 'Year', 'Fuel Type', 'Price'].forEach(header => {
+    ['ID', 'Brand', 'Model', 'Category', 'Year', 'Fuel Type', 'Price'].forEach(header => {
         const th = document.createElement('th');
         th.textContent = header;
         headerRow.appendChild(th);
@@ -145,7 +288,7 @@ const renderVehicleTable = (chatBox, vehicles) => {
     // Populate table rows with vehicle data
     vehicles.forEach(vehicle => {
         const row = document.createElement('tr');
-        ['ID', 'Brand', 'Model', 'Year', 'Fuel Type', 'Price'].forEach(key => {
+        ['ID', 'Brand', 'Model', 'Category', 'Year', 'Fuel Type', 'Price'].forEach(key => {
             const td = document.createElement('td');
             td.textContent = vehicle[key] || 'N/A';
             row.appendChild(td);
@@ -197,6 +340,16 @@ function sendMessage() {
 
         // Clear input field
         userInput.value = '';
+
+        // Check if the message is "Options" and trigger the "Let's get started!" behavior
+        if (message.toLowerCase() === "options") {
+            const startButton = document.querySelector('.start-button');
+            if (startButton && startButton.onclick) {
+                startButton.onclick(); 
+            }
+            return; 
+        }
+
 
         // Add loading indicator
         const loadingIndicator = document.createElement('div');

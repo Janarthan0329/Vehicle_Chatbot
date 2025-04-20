@@ -8,6 +8,7 @@ import faiss
 import numpy as np
 import markdown2 
 import logging
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -60,8 +61,13 @@ embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 docs = [Document(page_content=chunk) for chunk in chunks]
 vector_store = FAISS.from_documents(docs, embedding=embedding_model)
 
-# Initialize the LLM model
-llm = Ollama(model="llama2")
+# # Initialize the LLM model
+# llm = Ollama(model="llama2")
+
+# Load Flan-T5 model and tokenizer
+model_name = "google/flan-t5-base"  
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
 # Query Handling
 def handle_rag_query(query):
@@ -116,7 +122,14 @@ For each vehicle, list its details using bullet points:
 Your response should be as close as possible to this structure.
 """
 
-    response = llm.invoke(full_prompt)
+    # Tokenize the input
+    inputs = tokenizer(full_prompt, return_tensors="pt", max_length=512, truncation=True)
+
+    # Generate response
+    outputs = model.generate(inputs.input_ids, max_length=1024, num_beams=5, early_stopping=True)
+
+    # Decode the response
+    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return response.strip()
 
 
@@ -178,6 +191,7 @@ def get_vehicle_table_data():
                 "ID": row.get("id", "N/A"),
                 "Brand": row.get("brand", "N/A"),
                 "Model": row.get("model", "N/A"),
+                "Category": row.get("category", "N/A"),
                 "Year": row.get("year", "N/A"),
                 "Fuel Type": row.get("fuel_type", "N/A"),
                 "Price": row.get("price", "N/A"),
