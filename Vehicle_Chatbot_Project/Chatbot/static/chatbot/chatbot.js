@@ -273,13 +273,17 @@ document.addEventListener("DOMContentLoaded", () => {
                                 if (data.status === "success") {
                                     const comparison = data.comparison;
                 
+                                    // Generate vehicle names for column headers
+                                    const vehicle1Name = `${vehicleDetails[0].brand} ${vehicleDetails[0].model} ${vehicleDetails[0].type} (${vehicleDetails[0].category || 'N/A'})`;
+                                    const vehicle2Name = `${vehicleDetails[1].brand} ${vehicleDetails[1].model} ${vehicleDetails[1].type} (${vehicleDetails[1].category || 'N/A'})`;
+
                                     // Create a table for comparison
                                     const table = document.createElement('table');
                                     table.className = 'vehicle-table';
                 
                                     // Create table header
                                     const headerRow = document.createElement('tr');
-                                    ['Aspect', 'Vehicle 1', 'Vehicle 2'].forEach(header => {
+                                    ['Aspect', `Vehicle 1: ${vehicle1Name}`, 'Vehicle 2: ' + vehicle2Name].forEach(header => {
                                         const th = document.createElement('th');
                                         th.textContent = header;
                                         headerRow.appendChild(th);
@@ -309,6 +313,18 @@ document.addEventListener("DOMContentLoaded", () => {
                                     botResponse.className = 'chat-message bot';
                                     botResponse.appendChild(table);
                                     chatBox.appendChild(botResponse);
+
+                                    // Add "Price Recommendations" button below the table
+                                    const priceButton = document.createElement('button');
+                                    priceButton.className = 'option-button';
+                                    priceButton.textContent = "Price Recommendations";
+                                    priceButton.onclick = () => {
+                                        promptForVehicleChoice();
+
+                                        chatBox.scrollTop = chatBox.scrollHeight;
+                                    };
+
+                                    chatBox.appendChild(priceButton);
                                 } else {
                                     appendBotMessage(data.message || 'An error occurred while comparing vehicles.');
                                 }
@@ -340,10 +356,200 @@ document.addEventListener("DOMContentLoaded", () => {
                                     userInput.removeEventListener('keypress', handleKeyPress);
                                     askForVehicleDetails();
                                 }
+                                chatBox.scrollTop = chatBox.scrollHeight;
                             }
                         });
                     };
+
+                    const promptForVehicleChoice = () => {
+                        const botMessage = document.createElement('div');
+                        botMessage.className = 'chat-message bot';
+                        botMessage.textContent = "Choose a vehicle for price recommendations (Vehicle 1 or Vehicle 2):";
+                        chatBox.appendChild(botMessage);
+                    
+                        userInput.addEventListener('keypress', function handleKeyPress(e) {
+                            if (e.key === 'Enter') {
+                                const choice = userInput.value.trim();
+                                userInput.value = '';
+                                if (choice === "Vehicle 1" || choice === "Vehicle 2") {
+                                    const selectedVehicle = choice === "Vehicle 1" ? vehicleDetails[0] : vehicleDetails[1];
+                                    fetchPriceDetails(selectedVehicle);
+                                } else {
+                                    appendBotMessage("Invalid choice. Please type 'Vehicle 1' or 'Vehicle 2'.");
+                                }
+                                userInput.removeEventListener('keypress', handleKeyPress);
+                            }
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        });
+                    };
+
+                    const startPriceRecommendations = () => {
+                        const botMessage = document.createElement('div');
+                        botMessage.className = 'chat-message bot';
+                        botMessage.textContent = "Choose a vehicle for price recommendations (Vehicle 1 or Vehicle 2): and click 'Enter' Key on your keyboard";
+                        chatBox.appendChild(botMessage);
                 
+                        userInput.addEventListener('keypress', function handleKeyPress(e) {
+                            if (e.key === 'Enter') {
+                                const choice = userInput.value.trim();
+                                userInput.value = '';
+                                if (choice === "Vehicle 1" || choice === "Vehicle 2") {
+                                    const selectedVehicle = choice === "Vehicle 1" ? vehicleDetails[0] : vehicleDetails[1];
+                                    fetchPriceDetails(selectedVehicle);
+                                } else {
+                                    appendBotMessage("Invalid choice. Please type 'Vehicle 1' or 'Vehicle 2'.");
+                                }
+                                userInput.removeEventListener('keypress', handleKeyPress);
+                            }
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        });
+                    };
+                
+                    const fetchPriceDetails = (vehicle) => {
+                        fetch('/price_recommendations/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCSRFToken(),
+                            },
+                            body: JSON.stringify({ vehicle }),
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === "success") {
+                                const details = data.price_details;
+                                const vehicleDetails = data.vehicle_details;
+
+                                // Add vehicle details to the object
+                                const fullVehicleDetails = {
+                                    ...vehicleDetails,
+                                    price: details.Price,
+                                    tax: details.Tax,
+                                    total_price: details["Total Price"],
+                                    downpayment: details.Downpayment,
+                                };
+                
+                                // Display Final Price and Down Payment
+                                const botMessage = document.createElement('div');
+                                botMessage.className = 'chat-message bot';
+                                botMessage.innerHTML = `
+                                    <strong>Price Recommendations:</strong><br>
+                                    Final Price: LKR ${details["Total Price"]}.00<br>
+                                    Downpayment: LKR ${details["Downpayment"]}.00<br>
+                                    <br>To confirm, please type 'Yes' and click 'Enter' Key on your keyboard.
+                                `;
+                                chatBox.appendChild(botMessage);
+                                
+                                // Prompt for confirmation
+                                promptForConfirmation(fullVehicleDetails);
+                            } else {
+                                appendBotMessage(data.message || 'An error occurred while fetching price recommendations.');
+                            }
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            appendBotMessage('An error occurred. Please try again later.');
+                        });
+                    };
+                
+                    const promptForConfirmation = (vehicleDetails) => {
+                        userInput.addEventListener('keypress', function handleKeyPress(e) {
+                            if (e.key === 'Enter') {
+                                const confirmation = userInput.value.trim().toLowerCase();
+                                userInput.value = '';
+                                if (confirmation === "yes") {
+                                    // Display confirmation message
+                                    const botMessage = document.createElement('div');
+                                    botMessage.className = 'chat-message bot';
+                                    botMessage.innerHTML = `
+                                        <strong>Congratulations!</strong><br>
+                                        You have confirmed to buy the vehicle.<br>
+                                        <br>
+                                        <strong>Agreement Details:</strong><br>
+                                        Brand: ${vehicleDetails.brand}<br>
+                                        Model: ${vehicleDetails.model}<br>
+                                        Type: ${vehicleDetails.type}<br>
+                                        Category: ${vehicleDetails.category}<br>
+                                        Price: LKR ${vehicleDetails.price}.00<br>
+                                        Year: ${vehicleDetails.year}<br>
+                                        Fuel Type: ${vehicleDetails.fuel_type}<br>
+                                        Mileage: ${vehicleDetails.mileage}<br>
+                                        Transmission: ${vehicleDetails.transmission}<br>
+                                        Safety Rating: ${vehicleDetails.safety_rating}<br>
+                                        Warranty: ${vehicleDetails.warranty}<br>
+                                        <br>
+                                        Please provide us the installment months that are suitable for you (12, 24, or 36) and click 'Enter' Key on your keyboard.
+                                    `;
+                                    chatBox.appendChild(botMessage);
+                    
+                                    // Prompt for installment months
+                                    promptForInstallmentMonths(vehicleDetails);
+                                } else {
+                                    appendBotMessage("Confirmation not received. Please type 'Yes' to confirm.");
+                                }
+                                userInput.removeEventListener('keypress', handleKeyPress);
+                            }
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        });
+                    };
+                    
+                    const promptForInstallmentMonths = (vehicleDetails) => {
+                        userInput.addEventListener('keypress', function handleKeyPress(e) {
+                            if (e.key === 'Enter') {
+                                const months = parseInt(userInput.value.trim());
+                                userInput.value = '';
+                                if ([12, 24, 36].includes(months)) {
+                                    fetchInstallmentDetails(vehicleDetails, months);
+                                } else {
+                                    appendBotMessage("Invalid input. Please type 12, 24, or 36 for installment months.");
+                                }
+                                userInput.removeEventListener('keypress', handleKeyPress);
+                            }
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        });
+                    };
+                    
+                    const fetchInstallmentDetails = (vehicleDetails, months) => {
+                        fetch('/price_recommendations/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCSRFToken(),
+                            },
+                            body: JSON.stringify({ vehicle: vehicleDetails, installment_months: months }),
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === "success") {
+                                const details = data.price_details;
+                    
+                                // Display installment details
+                                const botMessage = document.createElement('div');
+                                botMessage.className = 'chat-message bot';
+                                botMessage.innerHTML = `
+                                    <strong>Installment Details:</strong><br>
+                                    Price: LKR ${details.Price}.00<br>
+                                    Tax: LKR ${details.Tax}.00<br>
+                                    Total Price: LKR ${details["Total Price"]}.00<br>
+                                    Downpayment: LKR ${details.Downpayment}.00<br>
+                                    Installment Months: ${details["Installment Months"]}<br>
+                                    Monthly Payment: LKR ${details["Monthly Payment"]}.00<br>
+                                    <br>Thank you for choosing us!
+                                `;
+                                chatBox.appendChild(botMessage);
+                            } else {
+                                appendBotMessage(data.message || 'An error occurred while fetching installment details.');
+                            }
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            appendBotMessage('An error occurred. Please try again later.');
+                        });
+                    };
+                
+                    // Start the workflow
                     askForVehicleDetails();
                 } else if (option === "Let's Chat") {
                     userInput.focus(); 
@@ -530,16 +736,31 @@ function sendMessage() {
             chatBox.removeChild(loadingIndicator);
 
             if (data.status === "success") {
-                // Render vehicle data
-                renderVehicleData(data.vehicles);
+                if (data.response) {
+                    // Handle common questions (e.g., greetings, FAQs)
+                    const botMessage = document.createElement('div');
+                    botMessage.className = 'chat-message bot';
+                    botMessage.textContent = data.response;
+                    chatBox.appendChild(botMessage);
+                } else if (data.vehicles) {
+                    // Handle vehicle-related questions (e.g., list, filter, compare)
+                    if (Array.isArray(data.vehicles) && data.vehicles.length > 0) {
+                        renderVehicleData(data.vehicles);
+                    } else {
+                        appendBotMessage('No vehicles found.');
+                    }
+                } else {
+                    // Handle unexpected success responses
+                    appendBotMessage('I am not sure how to respond to that.');
+                }
             } else {
-                // Display error message
+                // Handle error responses
                 const botMessage = document.createElement('div');
                 botMessage.className = 'chat-message bot';
                 botMessage.textContent = data.message || 'Sorry, I could not process your request.';
                 chatBox.appendChild(botMessage);
             }
-
+        
             // Scroll to the bottom of the chat box
             chatBox.scrollTop = chatBox.scrollHeight;
         })

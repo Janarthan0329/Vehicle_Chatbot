@@ -229,3 +229,89 @@ def compare_vehicles_view(request):
             return JsonResponse({"status": "error", "message": "An error occurred while processing the request."})
     else:
         return JsonResponse({"status": "error", "message": "Only POST requests are allowed."})
+    
+    
+    
+    
+
+@csrf_exempt
+def price_recommendations_view(request):
+    """
+    Django view to calculate price and finance recommendations.
+    """
+    if request.method == "POST":
+        try:
+            # Parse the JSON body
+            body = json.loads(request.body)
+            vehicle = body.get("vehicle", {})
+            installment_months = body.get("installment_months", None)
+
+            if not vehicle:
+                return JsonResponse({"status": "error", "message": "Vehicle details are required."})
+
+            # Load the vehicle_comparator.pkl file
+            comparator_path = os.path.join(BASE_DIR, "Chatbot/ml_models", "vehicle_comparator.pkl")
+            with open(comparator_path, 'rb') as f:
+                df_comparator = pickle.load(f)
+
+            # Find the selected vehicle in the dataset
+            selected_vehicle = df_comparator[
+                (df_comparator['brand'].str.lower() == vehicle['brand'].lower()) &
+                (df_comparator['model'].str.lower() == vehicle['model'].lower()) &
+                (df_comparator['type'].str.lower() == vehicle['type'].lower())
+            ]
+
+            if selected_vehicle.empty:
+                return JsonResponse({"status": "error", "message": "Vehicle not found in the dataset."})
+
+            # Extract vehicle details
+            vehicle_details = selected_vehicle.iloc[0].to_dict()
+            price = vehicle_details['price']
+            tax_rate = 0.1  # Assume 10% tax
+            tax = price * tax_rate
+            final_price = price + tax
+            down_payment = 0.5 * final_price
+
+            # If installment months are provided, calculate monthly payment
+            monthly_payment = None
+            if installment_months:
+                monthly_payment = (final_price - down_payment) / installment_months
+
+            # Round all price-related values and append "LKR"
+            price = round(price)
+            tax = round(tax)
+            final_price = round(final_price)
+            down_payment = round(down_payment)
+            monthly_payment = round(monthly_payment) if monthly_payment else None
+            
+            # Prepare the response
+            response = {
+                "status": "success",
+                "vehicle_details": {
+                    "brand": vehicle_details.get("brand"),
+                    "model": vehicle_details.get("model"),
+                    "type": vehicle_details.get("type"),
+                    "category": vehicle_details.get("category"),
+                    "price": float(vehicle_details.get("price", 0)),
+                    "year": vehicle_details.get("year"),
+                    "fuel_type": vehicle_details.get("fuel_type"),
+                    "mileage": vehicle_details.get("mileage"),
+                    "transmission": vehicle_details.get("transmission"),
+                    "safety_rating": vehicle_details.get("safety_rating"),
+                    "warranty": vehicle_details.get("warranty"),
+                },
+                "price_details": {
+                    "Price": float(price),  # Ensure JSON serializability
+                    "Tax": float(tax),
+                    "Total Price": float(final_price),
+                    "Downpayment": float(down_payment),
+                    "Installment Months": installment_months or "N/A",
+                    "Monthly Payment": float(monthly_payment) if monthly_payment else "N/A"
+                }
+            }
+            return JsonResponse(response)
+        except Exception as e:
+            logger.error(f"An error occurred: {str(e)}")
+            return JsonResponse({"status": "error", "message": "An error occurred while processing the request."})
+    else:
+        return JsonResponse({"status": "error", "message": "Only POST requests are allowed."})
