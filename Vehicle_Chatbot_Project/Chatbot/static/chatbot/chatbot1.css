@@ -174,3 +174,68 @@ button:hover {
 .vehicle-table tr:nth-child(odd) {
     background-color: #1a1a40;
 }
+
+
+
+.specific-vehicle-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    color: #ffffff;
+    background-color: #1a1a40;
+}
+
+.specific-vehicle-table th, .specific-vehicle-table td {
+    border: 1px solid #2c2c54;
+    padding: 10px;
+    text-align: left;
+}
+
+.specific-vehicle-table th {
+    background-color: #6f42c1;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.specific-vehicle-table tr:nth-child(even) {
+    background-color: #2c2c54;
+}
+
+.specific-vehicle-table tr:nth-child(odd) {
+    background-color: #1a1a40;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .chat-box h1 {
+        font-size: 40px;
+    }
+
+    .chat-box p {
+        font-size: 18px;
+    }
+
+    .chat-input {
+        flex-direction: column;
+    }
+
+    #user-input {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    button {
+        width: 100%;
+    }
+    .chat-box {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+    .chat-message {
+        font-size: 16px;
+    }
+    .option-button {
+        width: 100%;
+    }   
+}
+

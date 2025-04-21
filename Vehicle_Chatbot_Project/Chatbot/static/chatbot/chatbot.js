@@ -222,9 +222,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         const field = filterFields[index];
                         const botResponse = document.createElement('div');
                         botResponse.className = 'chat-message bot';
-                        botResponse.textContent = `Please enter a value for ${field}:`;
+                        botResponse.textContent = `Please enter a value for ${field}: & Click the "Enter" key on your keyboard`;
                         chatBox.appendChild(botResponse);
                 
+                        // Scroll to the bottom of the chat box
+                        chatBox.scrollTop = chatBox.scrollHeight;
+
                         // Remove any existing event listener
                         userInput.removeEventListener('keypress', handleKeyPress);
                 
@@ -244,6 +247,104 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                     // Start the filtering process
                     startFilterVehicles();
+                } else if (option === "Compare Vehicles") {
+                    // Prompt user to enter details for two vehicles
+                    const vehicleDetails = [];
+                    let currentVehicleIndex = 0;
+                
+                    const askForVehicleDetails = () => {
+                        if (currentVehicleIndex >= 2) {
+                            // Send the details to the backend for comparison
+                            fetch('/compare_vehicles/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': getCSRFToken(),
+                                },
+                                body: JSON.stringify({
+                                    vehicle1: vehicleDetails[0],
+                                    vehicle2: vehicleDetails[1]
+                                }),
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                chatBox.removeChild(loadingIndicator);
+                
+                                if (data.status === "success") {
+                                    const comparison = data.comparison;
+                
+                                    // Create a table for comparison
+                                    const table = document.createElement('table');
+                                    table.className = 'vehicle-table';
+                
+                                    // Create table header
+                                    const headerRow = document.createElement('tr');
+                                    ['Aspect', 'Vehicle 1', 'Vehicle 2'].forEach(header => {
+                                        const th = document.createElement('th');
+                                        th.textContent = header;
+                                        headerRow.appendChild(th);
+                                    });
+                                    table.appendChild(headerRow);
+                
+                                    // Populate table rows with comparison data
+                                    comparison.Aspect.forEach((aspect, index) => {
+                                        const tr = document.createElement('tr');
+                                        const aspectCell = document.createElement('td');
+                                        aspectCell.textContent = aspect;
+                                        tr.appendChild(aspectCell);
+                
+                                        const vehicle1Cell = document.createElement('td');
+                                        vehicle1Cell.textContent = comparison["Vehicle 1"][index] || 'N/A';
+                                        tr.appendChild(vehicle1Cell);
+                
+                                        const vehicle2Cell = document.createElement('td');
+                                        vehicle2Cell.textContent = comparison["Vehicle 2"][index] || 'N/A';
+                                        tr.appendChild(vehicle2Cell);
+                
+                                        table.appendChild(tr);
+                                    });
+                
+                                    // Append the table to the chat box
+                                    const botResponse = document.createElement('div');
+                                    botResponse.className = 'chat-message bot';
+                                    botResponse.appendChild(table);
+                                    chatBox.appendChild(botResponse);
+                                } else {
+                                    appendBotMessage(data.message || 'An error occurred while comparing vehicles.');
+                                }
+                
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                chatBox.removeChild(loadingIndicator);
+                                appendBotMessage('An error occurred. Please try again later.');
+                            });
+                            return;
+                        }
+                
+                        // Ask for details of the next vehicle
+                        const botMessage = document.createElement('div');
+                        botMessage.className = 'chat-message bot';
+                        botMessage.textContent = `Please enter details for Vehicle ${currentVehicleIndex + 1} (brand, model, type): & Click the "Enter" key on your keyboard`;
+                        chatBox.appendChild(botMessage);
+                
+                        userInput.addEventListener('keypress', function handleKeyPress(e) {
+                            if (e.key === 'Enter') {
+                                const value = userInput.value.trim();
+                                userInput.value = '';
+                                if (value) {
+                                    const [brand, model, type] = value.split(',').map(v => v.trim());
+                                    vehicleDetails[currentVehicleIndex] = { brand, model, type };
+                                    currentVehicleIndex++;
+                                    userInput.removeEventListener('keypress', handleKeyPress);
+                                    askForVehicleDetails();
+                                }
+                            }
+                        });
+                    };
+                
+                    askForVehicleDetails();
                 } else if (option === "Let's Chat") {
                     userInput.focus(); 
                     loadingIndicator.remove(); 
@@ -326,6 +427,57 @@ function getCSRFToken() {
     return null;
 }
 
+
+
+
+
+
+// Function to render vehicle data as tables
+const renderVehicleData = (vehicles) => {
+    const chatBox = document.getElementById('chat-box');
+
+    vehicles.forEach(vehicle => {
+        // Create a heading for the vehicle name
+        const vehicleName = document.createElement('h3');
+        vehicleName.textContent = `Vehicle Name: ${vehicle.name}`;
+        chatBox.appendChild(vehicleName);
+
+        // Create a table for the vehicle details
+        const table = document.createElement('table');
+        table.border = "1";
+        table.className = 'specific-vehicle-table';
+
+        // Create table header
+        const headerRow = document.createElement('tr');
+        const aspectHeader = document.createElement('th');
+        aspectHeader.textContent = 'Aspect';
+        const valueHeader = document.createElement('th');
+        valueHeader.textContent = 'Value';
+        headerRow.appendChild(aspectHeader);
+        headerRow.appendChild(valueHeader);
+        table.appendChild(headerRow);
+
+        // Populate table rows with vehicle details
+        for (const [aspect, value] of Object.entries(vehicle.details)) {
+            const row = document.createElement('tr');
+            const aspectCell = document.createElement('td');
+            aspectCell.textContent = aspect;
+            const valueCell = document.createElement('td');
+            valueCell.textContent = value;
+            row.appendChild(aspectCell);
+            row.appendChild(valueCell);
+            table.appendChild(row);
+        }
+
+        // Append the table to the chat box
+        chatBox.appendChild(table);
+    });
+
+    // Scroll to the bottom of the chat box
+    chatBox.scrollTop = chatBox.scrollHeight;
+};
+
+// Function to send a message to the server
 function sendMessage() {
     const chatBox = document.getElementById('chat-box');
     const userInput = document.getElementById('user-input');
@@ -341,16 +493,6 @@ function sendMessage() {
         // Clear input field
         userInput.value = '';
 
-        // Check if the message is "Options" and trigger the "Let's get started!" behavior
-        if (message.toLowerCase() === "options") {
-            const startButton = document.querySelector('.start-button');
-            if (startButton && startButton.onclick) {
-                startButton.onclick(); 
-            }
-            return; 
-        }
-
-
         // Add loading indicator
         const loadingIndicator = document.createElement('div');
         loadingIndicator.className = 'loading-indicator';
@@ -360,12 +502,25 @@ function sendMessage() {
         // Scroll to the bottom of the chat box
         chatBox.scrollTop = chatBox.scrollHeight;
 
+        // Check if the user typed "Options"
+        if (message.toLowerCase() === "options") {
+            // Remove loading indicator
+            chatBox.removeChild(loadingIndicator);
+
+            // Simulate the "Let's get started!" button click
+            const startButton = document.querySelector('.start-button');
+            if (startButton && startButton.onclick) {
+                startButton.onclick();
+            }
+            return;
+        }
+
         // Send the message to the server
         fetch('/query/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken(), 
+                'X-CSRFToken': getCSRFToken(),
             },
             body: JSON.stringify({ query: message }),
         })
@@ -374,11 +529,16 @@ function sendMessage() {
             // Remove loading indicator
             chatBox.removeChild(loadingIndicator);
 
-            // Display bot response
-            const botMessage = document.createElement('div');
-            botMessage.className = 'chat-message bot';
-            botMessage.textContent = data.response || 'Sorry, I could not process your request.';
-            chatBox.appendChild(botMessage);
+            if (data.status === "success") {
+                // Render vehicle data
+                renderVehicleData(data.vehicles);
+            } else {
+                // Display error message
+                const botMessage = document.createElement('div');
+                botMessage.className = 'chat-message bot';
+                botMessage.textContent = data.message || 'Sorry, I could not process your request.';
+                chatBox.appendChild(botMessage);
+            }
 
             // Scroll to the bottom of the chat box
             chatBox.scrollTop = chatBox.scrollHeight;

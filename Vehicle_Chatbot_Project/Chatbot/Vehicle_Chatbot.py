@@ -71,76 +71,60 @@ model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
 # Query Handling
 def handle_rag_query(query):
-    results = vector_store.similarity_search(query, k=3)
-    context = "\n".join([doc.page_content for doc in results])
+    """
+    Handles the user's query by understanding the question, accessing the dataset,
+    processing the data, and returning structured data.
+    """
+    try:
+        # Step 1: Log the query for debugging
+        logger.info(f"Received query: {query}")
 
-    full_prompt = f"""
-You are a helpful vehicle assistant. Based on the provided context, answer the user's question in a clear, organized, and structured format.
+        # Step 2: Perform similarity search in the FAISS vector store
+        results = vector_store.similarity_search(query, k=3)
+        if not results:
+            logger.warning("No relevant results found in the dataset.")
+            return {"status": "error", "message": "No relevant information found for your query."}
 
-Context:
-{context}
+        # Step 3: Extract relevant context from the results
+        vehicles = []
+        for doc in results:
+            # Parse the document content into a dictionary
+            vehicle_data = {}
+            for line in doc.page_content.split("\n"):
+                if ": " in line:
+                    key, value = line.split(": ", 1)
+                    vehicle_data[key.strip()] = value.strip()
 
-User Question:
-{query}
+            # Add the vehicle data to the list
+            vehicles.append({
+                "name": f"{vehicle_data.get('Brand', 'N/A')} {vehicle_data.get('Model', 'N/A')} {vehicle_data.get('Type', 'N/A')} {vehicle_data.get('Category', 'N/A')}",
+                "details": {
+                    "Brand": vehicle_data.get("Brand", "N/A"),
+                    "Model": vehicle_data.get("Model", "N/A"),
+                    "Year": vehicle_data.get("Year", "N/A"),
+                    "Fuel Type": vehicle_data.get("Fuel Type", "N/A"),
+                    "Engine Capacity": vehicle_data.get("Engine Capacity", "N/A"),
+                    "Transmission": vehicle_data.get("Transmission", "N/A"),
+                    "Safety Rating": vehicle_data.get("Safety Rating", "N/A"),
+                    "Price": vehicle_data.get("Price", "N/A"),
+                    "Mileage": vehicle_data.get("Mileage", "N/A"),
+                    "Additional Features": vehicle_data.get("Additional Features", "N/A"),
+                }
+            })
 
-Please format your response using the following structure:
+        # Return the structured data
+        return {"status": "success", "vehicles": vehicles}
 
-**Overview**: A brief summary of matching vehicles (e.g., total count, types/models).
-**Specifications**:
-For each vehicle, list its details using bullet points:
-- Brand
-- Model
-- Year
-- Fuel Type
-- Engine Capacity
-- Transmission
-- Safety Rating
-- Maintenance Cost
-- After Sales Service
-- Financing Options
-- Insurance Info
-- Additional Features
-- Warranty
-- Seller: name, contact, location
-- Make Country
-- Imported From
-
-**Price**: List prices per model.
-
-**Seller Information**: Summarize seller details like:
-- Name
-- Contact Number
-- Location
-
-**Important Notes**:
-- Use bold section headers.
-- Separate each vehicle clearly.
-- Use bullet points for easy readability.
-- Don’t include raw data from context.
-- Ensure clarity and brevity.
-
-Your response should be as close as possible to this structure.
-"""
-
-    # Tokenize the input
-    inputs = tokenizer(full_prompt, return_tensors="pt", max_length=512, truncation=True)
-
-    # Generate response
-    outputs = model.generate(inputs.input_ids, max_length=1024, num_beams=5, early_stopping=True)
-
-    # Decode the response
-    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return response.strip()
-
-
-
+    except Exception as e:
+        logger.error(f"Error in handle_rag_query: {str(e)}")
+        return {"status": "error", "message": "An error occurred while processing your query. Please try again."}
 
  
 
 def query_vehicle_data(query):
     """
     Django view function to handle vehicle-related queries.
-    Converts structured markdown-style response to HTML for pretty frontend rendering.
+    Returns structured JSON data for frontend rendering.
     """
     try:
         # Predefined responses for common greetings
@@ -155,18 +139,21 @@ def query_vehicle_data(query):
 
         # Handle predefined greetings
         if query_lower in common_responses:
-            raw_response = common_responses[query_lower]
-        else:
-            # Handle RAG-based query
-            raw_response = handle_rag_query(query)
+            return {"status": "success", "response": common_responses[query_lower]}
 
-        # Convert structured markdown-style text to HTML
-        html_response = markdown2.markdown(raw_response)
+        # Handle RAG-based query
+        result = handle_rag_query(query)
 
-        return {"status": "success", "response": html_response}
+        # Return the structured response
+        return result
 
     except Exception as e:
+        logger.error(f"Error in query_vehicle_data: {str(e)}")
         return {"status": "error", "message": str(e)}
+
+
+
+
 
 
 
