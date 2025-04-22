@@ -146,6 +146,15 @@ def filter_vehicles_view(request):
             filters = body.get("filters", {})
             logger.info(f"Received filters: {filters}")
 
+            # Remove invalid keys
+            valid_columns = vehicle_filter_data['data'].columns
+            filters = {key: value for key, value in filters.items() if key in valid_columns}
+
+            # Log and remove unexpected keys
+            unexpected_keys = set(body.get("filters", {}).keys()) - set(valid_columns)
+            if unexpected_keys:
+                logger.warning(f"Unexpected keys in filters: {unexpected_keys}")
+
             if not filters:
                 return JsonResponse({"status": "error", "message": "Filters are required."})
 
@@ -178,7 +187,56 @@ def filter_vehicles_view(request):
 
 
 
+@csrf_exempt
+def vehicle_specifications_view(request, vehicle_id):
+    """
+    Django view to fetch specifications for a specific vehicle.
+    """
+    if request.method == "GET":
+        try:
+            # Load the vehicle dataset
+            comparator_path = os.path.join(BASE_DIR, "Chatbot/ml_models", "vehicle_comparator.pkl")
+            with open(comparator_path, 'rb') as f:
+                df_comparator = pickle.load(f)
 
+            # Find the vehicle by ID
+            selected_vehicle = df_comparator[df_comparator['id'] == int(vehicle_id)]
+
+            if selected_vehicle.empty:
+                return JsonResponse({"status": "error", "message": "Vehicle not found."})
+
+            # Convert the vehicle details to a dictionary
+            vehicle_details = selected_vehicle.iloc[0].to_dict()
+
+            # Prepare the specifications response
+            specifications = {
+                "Brand": vehicle_details.get("brand"),
+                "Model": vehicle_details.get("model"),
+                "Type": vehicle_details.get("type"),
+                "Category": vehicle_details.get("category"),
+                "Price": f"LKR {vehicle_details.get('price', 0)}.00",
+                "Year": vehicle_details.get("year"),
+                "Fuel Type": vehicle_details.get("fuel_type"),
+                "Mileage": vehicle_details.get("mileage"),
+                "Engine Capacity": vehicle_details.get("engine_capacity"),
+                "Fuel_Tank_Capacity": vehicle_details.get("fuel_tank_capacity"),
+                "Seat Capacity": vehicle_details.get("seat_capacity"),
+                "Transmission": vehicle_details.get("transmission"),
+                "Safety Rating": vehicle_details.get("safety_rating"),
+                "Maintenance Cost": vehicle_details.get("maintenance_cost"),
+                "After Sales Service": vehicle_details.get("after_sales_service"),
+                "Financing Options": vehicle_details.get("financing_options"),
+                "Insurance Info": vehicle_details.get("insurance_info"),
+                "Additional Features": vehicle_details.get("additional_features"),
+                "Warranty": vehicle_details.get("warranty"),
+            }
+
+            return JsonResponse({"status": "success", "specifications": specifications})
+        except Exception as e:
+            logger.error(f"An error occurred: {str(e)}")
+            return JsonResponse({"status": "error", "message": "An error occurred while fetching vehicle specifications."})
+    else:
+        return JsonResponse({"status": "error", "message": "Only GET requests are allowed."})
 
 
 @csrf_exempt
@@ -193,9 +251,16 @@ def compare_vehicles_view(request):
             vehicle1 = body.get("vehicle1", {})
             vehicle2 = body.get("vehicle2", {})
 
-            if not vehicle1 or not vehicle2:
-                return JsonResponse({"status": "error", "message": "Both vehicles must be provided."})
-
+            # Validate vehicle data
+            required_keys = ['brand', 'model', 'type']
+            for vehicle in [vehicle1, vehicle2]:
+                for key in required_keys:
+                    if key not in vehicle:
+                        return JsonResponse({"status": "error", "message": f"Missing key '{key}' in vehicle data."})
+                    
+            # Ensure no interference with filters
+            logger.info(f"Comparing vehicles: {vehicle1} and {vehicle2}") 
+                    
             # Load the vehicle_comparator.pkl file
             comparator_path = os.path.join(BASE_DIR, "Chatbot/ml_models", "vehicle_comparator.pkl")
             with open(comparator_path, 'rb') as f:

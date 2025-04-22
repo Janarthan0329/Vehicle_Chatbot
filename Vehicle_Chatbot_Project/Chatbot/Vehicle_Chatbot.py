@@ -129,10 +129,38 @@ def query_vehicle_data(query):
     try:
         # Predefined responses for common greetings
         common_responses = {
+            # Greetings
             "hi": "Hello! Welcome to the Vehicle Chatbot. How can I assist you today?",
             "hello": "Hi there! Welcome to the Vehicle Chatbot. How can I help you?",
-            "welcome": "Welcome to the Vehicle Chatbot! Feel free to ask me about vehicles.",
+            "hey": "Hey! Looking for a vehicle? I’m here to help!",
+            "good morning": "Good morning! How can I assist you with your vehicle needs?",
+            "good afternoon": "Good afternoon! Ready to explore some vehicles?",
+            "good evening": "Good evening! How can I help you with vehicle options?",
+            "welcome": "Welcome to the Vehicle Chatbot! Feel free to ask me about any car or service.",
+
+            # Gratitude
+            "thank you": "You're very welcome! Let me know if you have more questions.",
+            "thanks": "Anytime! I'm here to help with your vehicle needs.",
+
+            # Farewell
+            "bye": "Goodbye! Have a great day and drive safe!",
+            "see you": "See you soon! Reach out if you need help with vehicles again.",
+            "goodbye": "Goodbye! Wishing you the best on your vehicle journey.",
+
+            # Identity / Bot Role
+            "who are you": "I’m your friendly vehicle assistant! I can help you find, compare, and understand cars.",
+            "what can you do": "I can help you find vehicles, compare models, estimate prices or EMI, and give specs, features, and seller info!",
+            "help": "You can ask me things like:\n- Compare two vehicles\n- Show fuel-efficient cars\n- Price of Toyota Aqua\n- EMI for a car\nTry one!",
+
+            # Miscellaneous
+            "how are you": "I'm great! Always ready to help you find your perfect ride 🚗",
+            "are you a bot": "Yes, I’m an AI-powered chatbot built to assist with all your vehicle-related questions.",
+            "do you sell cars": "I don't sell cars myself, but I can show you detailed listings, prices, features, and seller info.",
+            "available cars": "Yes! You can ask me about available cars by brand, year, fuel type, or budget.",
+            "need to bye a car": "I can help you with that! Just tell me what you're looking for, and I'll find the best options for you.",
+            "i need a bike": "I can help you with that! Just tell me what you're looking for, and I'll find the best options for you.",
         }
+
 
         # Normalize the input
         query_lower = query.strip().lower()

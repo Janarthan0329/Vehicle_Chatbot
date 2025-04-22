@@ -26,16 +26,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // Fourth welcome message
     const message4 = document.createElement('div');
     message4.className = 'chat-message bot';
-    message4.innerHTML = "Just type <a href='#' id='options-link' style='color: yellow; font-size: 1.2em; text-decoration: none;'>'Options'</a> anywhere to access easy options to get started!";
+    message4.innerHTML = "Just type <a href='#' id='options-link' style='color: yellow; font-size: 1.2em; text-decoration: none;'>'Options'</a> anywhere and Click 'Send' button to access easy options to get started!";
     chatBox.appendChild(message4);
 
     // Add event listener to the hyperlink
     const optionsLink = document.getElementById('options-link');
     optionsLink.addEventListener('click', (event) => {
-        event.preventDefault(); // Prevent the default hyperlink behavior
+        event.preventDefault(); 
         const startButton = document.querySelector('.start-button');
         if (startButton && startButton.onclick) {
-            startButton.onclick(); // Trigger the same logic as the "Let's get started!" button
+            startButton.onclick(); 
         }
     });
 
@@ -75,6 +75,11 @@ document.addEventListener("DOMContentLoaded", () => {
             optionButton.className = 'option-button';
             optionButton.textContent = option;
             optionButton.onclick = () => {
+
+                // Clear previous inputs and reset variables
+                userInput.value = '';
+                
+
                 // Simulate user selecting an option
                 const userOption = document.createElement('div');
                 userOption.className = 'chat-message user';
@@ -177,7 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                         table.className = 'vehicle-table';
                         
                                         const headerRow = document.createElement('tr');
-                                        ['Brand', 'Model', 'Category', 'Fuel Type', 'Transmission', 'Year', 'Mileage'].forEach(header => {
+                                        ['Brand', 'Model', 'Category', 'Fuel Type', 'Transmission', 'Year', 'Mileage', 'Specification'].forEach(header => {
                                             const th = document.createElement('th');
                                             th.textContent = header;
                                             headerRow.appendChild(th);
@@ -191,9 +196,50 @@ document.addEventListener("DOMContentLoaded", () => {
                                                 td.textContent = vehicle[key] || 'N/A';
                                                 row.appendChild(td);
                                             });
+
+                                            // Add "Specification" button
+                                            const specButtonCell = document.createElement('td');
+                                            const specButton = document.createElement('button');
+                                            specButton.textContent = 'Spec';
+                                            specButton.className = 'spec-button';
+                                            specButton.onclick = () => {
+                                                // Fetch and display specifications for the selected vehicle
+                                                fetch(`/vehicle_specifications/${vehicle.id}/`, {
+                                                    method: 'GET',
+                                                    headers: {
+                                                        'Content-Type': 'application/json',
+                                                    },
+                                                })
+                                                .then(response => response.json())
+                                                .then(specData => {
+                                                    if (specData.status === "success") {
+                                                        // Populate the modal with vehicle details
+                                                        const modalDetails = document.getElementById('modal-details');
+                                                        modalDetails.innerHTML = `
+                                                            <strong>Specifications for ${vehicle.brand} ${vehicle.model}:</strong><br>
+                                                            ${Object.entries(specData.specifications)
+                                                                .map(([key, value]) => `<p><strong>${key}:</strong> ${value}</p>`)
+                                                                .join('')}
+                                                        `;
+
+                                                        // Display the modal
+                                                        const modal = document.getElementById('vehicle-modal');
+                                                        modal.style.display = 'block';
+                                                    } else {
+                                                        appendBotMessage('Unable to fetch specifications.');
+                                                    }
+                                                })
+                                                .catch(error => {
+                                                    console.error('Error fetching specifications:', error);
+                                                    appendBotMessage('An error occurred while fetching specifications.');
+                                                });
+                                            };
+                                            specButtonCell.appendChild(specButton);
+                                            row.appendChild(specButtonCell);
+
                                             table.appendChild(row);
                                         });
-                        
+
                                         const botResponse = document.createElement('div');
                                         botResponse.className = 'chat-message bot';
                                         botResponse.appendChild(table);
@@ -205,8 +251,11 @@ document.addEventListener("DOMContentLoaded", () => {
                                     botResponse.textContent = 'No vehicles match the filters.';
                                     chatBox.appendChild(botResponse);
                                 }
-                        
+
                                 chatBox.scrollTop = chatBox.scrollHeight;
+
+                                // Reset filters after the workflow is complete
+                                Object.keys(filters).forEach(key => delete filters[key]);
                             })
                             .catch(error => {
                                 console.error('Error:', error);
@@ -218,6 +267,21 @@ document.addEventListener("DOMContentLoaded", () => {
                             return;
                         }
                 
+                        // Close the modal when the close button is clicked
+                        const modal = document.getElementById('vehicle-modal');
+                        const closeButton = document.querySelector('.close-button');
+
+                        closeButton.onclick = () => {
+                            modal.style.display = 'none';
+                        };
+
+                        // Close the modal when clicking outside of it
+                        window.onclick = (event) => {
+                            if (event.target === modal) {
+                                modal.style.display = 'none';
+                            }
+                        };
+
                         // Ask for the next filter field
                         const field = filterFields[index];
                         const botResponse = document.createElement('div');
@@ -364,7 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const promptForVehicleChoice = () => {
                         const botMessage = document.createElement('div');
                         botMessage.className = 'chat-message bot';
-                        botMessage.textContent = "Choose a vehicle for price recommendations (Vehicle 1 or Vehicle 2):";
+                        botMessage.textContent = "Choose a vehicle for price recommendations (Vehicle 1 or Vehicle 2): & Click the 'Enter' key on your keyboard";
                         chatBox.appendChild(botMessage);
                     
                         userInput.addEventListener('keypress', function handleKeyPress(e) {
