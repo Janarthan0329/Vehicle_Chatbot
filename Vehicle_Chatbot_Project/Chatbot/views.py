@@ -40,7 +40,9 @@ def vehicle_query_view(request):
             body = json.loads(request.body)
             query = body.get("query", "")
             logger.info(f"Received query: {query}")
+            
             if not query:
+                logger.warning("Query parameter is missing in the request.")
                 return JsonResponse({"status": "error", "message": "Query parameter is required."})
             
             # Call the query_vehicle_data function
@@ -50,6 +52,9 @@ def vehicle_query_view(request):
         except json.JSONDecodeError:
             logger.error("Invalid JSON body.")
             return JsonResponse({"status": "error", "message": "Invalid JSON body."})
+        except Exception as e:
+            logger.error(f"An unexpected error occurred: {str(e)}")
+            return JsonResponse({"status": "error", "message": "An unexpected error occurred."})
     else:
         logger.error("Invalid request method.")
         return JsonResponse({"status": "error", "message": "Only POST requests are allowed."})

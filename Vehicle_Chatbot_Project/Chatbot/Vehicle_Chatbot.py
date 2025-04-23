@@ -69,57 +69,233 @@ model_name = "google/flan-t5-base"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
+
+
 # Query Handling
 def handle_rag_query(query):
     """
-    Handles the user's query by understanding the question, accessing the dataset,
-    processing the data, and returning structured data.
+    Handles the user's query by guiding them through a structured communication flow,
+    dynamically responding with relevant data from the dataset, and performing similarity searches.
     """
     try:
-        # Step 1: Log the query for debugging
         logger.info(f"Received query: {query}")
+        query_lower = query.strip().lower()
 
-        # Step 2: Perform similarity search in the FAISS vector store
+        # Step 1: User Initiation
+        if "buy a vehicle" in query_lower or "vehicle category" in query_lower:
+            return {
+                "status": "success",
+                "response": "Which brand are you interested in?"
+            }
+
+        # Step 2: Ask Brand, model, Type, Category
+        if "brand" in query_lower:
+            brands = df['brand'].unique().tolist()
+            return {
+                "status": "success",
+                "response": f"Available brands are: {', '.join(brands)}. What model do you prefer?"
+            }
+            
+        if "model" in query_lower:
+            models = df['model'].unique().tolist()
+            return {
+                "status": "success",
+                "response": f"Available models are: {', '.join(models)}. What type of vehicle are you looking for? (e.g., sedan, SUV, hatchback)"
+            }
+            
+        if "type" in query_lower:
+            types = df['type'].unique().tolist()
+            return {
+                "status": "success",
+                "response": f"Available types are: {', '.join(types)}. What category do you prefer? (e.g., luxury, economy, sports)"
+            }
+            
+        if "category" in query_lower:
+            categories = df['category'].unique().tolist()
+            return {
+                "status": "success",
+                "response": f"Available categories are: {', '.join(categories)}. What is your preferred fuel type?"
+            }
+            
+        # Step 3: Ask Fuel Type
+        if "fuel_type" in query_lower:
+            fuel_types = df['fuel_type'].unique().tolist()
+            return {
+                "status": "success",
+                "response": f"Available fuel types are: {', '.join(fuel_types)}. What is your budget range?"
+            }
+
+        # Step 4: Ask Budget
+        if "budget" in query_lower:
+            try:
+                price_limit = int(query_lower.split("budget")[-1].strip().split()[0].replace("$", "").replace(",", ""))
+                filtered_df = df[df["price"] <= price_limit]
+                if filtered_df.empty:
+                    return {
+                        "status": "success",
+                        "response": "No vehicles match your budget. Would you like to adjust your criteria?"
+                    }
+
+                vehicles = []
+                for _, row in filtered_df.iterrows():
+                    vehicles.append({
+                        "Vehicle": f"{row['brand']} {row['model']} {row['type']} {row['category']}",
+                        "Price": row['price'],
+                        "Year": row['year'],
+                        "Fuel Type": row['fuel_type'],
+                        "Mileage": row['mileage']
+                    })
+
+                return {
+                    "status": "success",
+                    "response": "Here are some vehicles matching your preferences:",
+                    "vehicles": vehicles[:10]  # Limit to 10 results
+                }
+            except ValueError:
+                return {
+                    "status": "error",
+                    "response": "Invalid budget format. Please provide a valid number."
+                }
+
+        # Step 5: Ask if More Details Needed
+        if "more details" in query_lower:
+            try:
+                # Prompt user to provide details in the correct format
+                if "details for" in query_lower:
+                    inputs = query_lower.split("details for")[-1].strip().lower().split(",")
+                    if len(inputs) == 4:
+                        brand, model, vehicle_type, category = [i.strip() for i in inputs]
+                        # Filter the DataFrame for the specific vehicle
+                        vehicle = df[
+                            (df['brand'].str.lower() == brand) &
+                            (df['model'].str.lower() == model) &
+                            (df['type'].str.lower() == vehicle_type) &
+                            (df['category'].str.lower() == category)
+                        ].to_dict('records')
+                        
+                        if vehicle:
+                            logger.info(f"Returning vehicle details: {vehicle[0]}")
+                            return {
+                                "status": "success",
+                                "response": "Here is the detailed information for the selected vehicle:",
+                                "vehicle_details": vehicle[0]  # Return the first matching record
+                            }
+                        else:
+                            return {
+                                "status": "error",
+                                "response": "No vehicle found matching the provided details. Please check your input."
+                            }
+                    else:
+                        return {
+                            "status": "error",
+                            "response": "Invalid input format. Please provide details in the format: brand, model, type, category."
+                        }
+                else:
+                    return {
+                        "status": "success",
+                        "response": "Please provide the vehicle name (brand, model, type, category) for detailed information."
+                    }
+            except Exception as e:
+                logger.error(f"Error in 'more details' query: {str(e)}")
+                return {
+                    "status": "error",
+                    "response": "An error occurred while processing your request. Please try again."
+                }
+
+
+        # Step 7: Ask Next Action
+        if "next action" in query_lower:
+            return {
+                "status": "success",
+                "response": "Would you like to contact the seller, schedule a test drive, or get financing information?"
+            }
+
+        # Handle filtering queries
+        if "show me" in query_lower or "filter" in query_lower:
+            filters = {}
+            if "under" in query_lower:
+                try:
+                    price_limit = int(query_lower.split("under")[-1].strip().split()[0].replace("$", "").replace(",", ""))
+                    filters["price"] = lambda x: x <= price_limit
+                except ValueError:
+                    return {"status": "error", "message": "Invalid price format in the query."}
+
+            if "year" in query_lower:
+                try:
+                    year_limit = int(query_lower.split("year")[-1].strip().split()[0])
+                    filters["year"] = lambda x: x >= year_limit
+                except ValueError:
+                    return {"status": "error", "message": "Invalid year format in the query."}
+                
+            if "mileage" in query_lower:
+                try:
+                    mileage_limit = int(query_lower.split("mileage")[-1].strip().split()[0])
+                    filters["mileage"] = lambda x: x >= mileage_limit
+                except ValueError:
+                    return {"status": "error", "message": "Invalid mileage format in the query."}
+                
+            
+
+            # Apply filters to the dataset
+            filtered_df = df
+            for column, condition in filters.items():
+                if column in filtered_df.columns:
+                    filtered_df = filtered_df[filtered_df[column].apply(condition)]
+
+            # Format the filtered data
+            vehicles = []
+            for _, row in filtered_df.iterrows():
+                vehicles.append({
+                    "Vehicle": f"{row['brand']} {row['model']} {row['type']} {row['category']}",
+                    "Price": row['price'],
+                    "Year": row['year'],
+                    "Fuel Type": row['fuel_type'],
+                    "Mileage": row['mileage']
+                })
+
+            if not vehicles:
+                return {"status": "success", "response": "No vehicles match your filters."}
+
+            return {
+                "status": "success",
+                "response": "Here are some vehicles that match your filters:",
+                "vehicles": vehicles[:10]  # Limit to 10 results
+            }
+
+        # Perform similarity search for other queries
         results = vector_store.similarity_search(query, k=3)
         if not results:
-            logger.warning("No relevant results found in the dataset.")
-            return {"status": "error", "message": "No relevant information found for your query."}
+            return {"status": "error", "message": "No relevant results found. Please refine your query."}
 
-        # Step 3: Extract relevant context from the results
         vehicles = []
         for doc in results:
-            # Parse the document content into a dictionary
             vehicle_data = {}
             for line in doc.page_content.split("\n"):
                 if ": " in line:
                     key, value = line.split(": ", 1)
                     vehicle_data[key.strip()] = value.strip()
 
-            # Add the vehicle data to the list
             vehicles.append({
-                "name": f"{vehicle_data.get('Brand', 'N/A')} {vehicle_data.get('Model', 'N/A')} {vehicle_data.get('Type', 'N/A')} {vehicle_data.get('Category', 'N/A')}",
-                "details": {
-                    "Brand": vehicle_data.get("Brand", "N/A"),
-                    "Model": vehicle_data.get("Model", "N/A"),
-                    "Year": vehicle_data.get("Year", "N/A"),
-                    "Fuel Type": vehicle_data.get("Fuel Type", "N/A"),
-                    "Engine Capacity": vehicle_data.get("Engine Capacity", "N/A"),
-                    "Transmission": vehicle_data.get("Transmission", "N/A"),
-                    "Safety Rating": vehicle_data.get("Safety Rating", "N/A"),
-                    "Price": vehicle_data.get("Price", "N/A"),
-                    "Mileage": vehicle_data.get("Mileage", "N/A"),
-                    "Additional Features": vehicle_data.get("Additional Features", "N/A"),
-                }
+                "Vehicle": f"{vehicle_data.get('Brand', 'N/A')} {vehicle_data.get('Model', 'N/A')} {vehicle_data.get('Type', 'N/A')} {vehicle_data.get('Category', 'N/A')}",
+                "Price": vehicle_data.get("Price", "N/A"),
+                "Year": vehicle_data.get("Year", "N/A"),
+                "Fuel Type": vehicle_data.get("Fuel Type", "N/A"),
+                "Mileage": vehicle_data.get("Mileage", "N/A"),
             })
 
-        # Return the structured data
-        return {"status": "success", "vehicles": vehicles}
+        return {
+            "status": "success",
+            "response": "Here are some vehicles that match your query:",
+            "vehicles": vehicles[:10]
+        }
 
     except Exception as e:
         logger.error(f"Error in handle_rag_query: {str(e)}")
         return {"status": "error", "message": "An error occurred while processing your query. Please try again."}
-
- 
+    
+    
+    
+    
 
 def query_vehicle_data(query):
     """
@@ -170,7 +346,9 @@ def query_vehicle_data(query):
             return {"status": "success", "response": common_responses[query_lower]}
 
         # Handle RAG-based query
+        logger.info(f"Processing query: {query}")
         result = handle_rag_query(query)
+        logger.info(f"Query result: {result}")
 
         # Return the structured response
         return result

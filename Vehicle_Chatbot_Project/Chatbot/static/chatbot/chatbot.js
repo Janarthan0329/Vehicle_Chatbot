@@ -216,9 +216,9 @@ document.addEventListener("DOMContentLoaded", () => {
                                                         // Populate the modal with vehicle details
                                                         const modalDetails = document.getElementById('modal-details');
                                                         modalDetails.innerHTML = `
-                                                            <strong>Specifications for ${vehicle.brand} ${vehicle.model}:</strong><br>
+                                                            Specifications for ${vehicle.brand} ${vehicle.model}:<br>
                                                             ${Object.entries(specData.specifications)
-                                                                .map(([key, value]) => `<p><strong>${key}:</strong> ${value}</p>`)
+                                                                .map(([key, value]) => `<p>${key}: ${value}</p>`)
                                                                 .join('')}
                                                         `;
 
@@ -497,7 +497,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                 const botMessage = document.createElement('div');
                                 botMessage.className = 'chat-message bot';
                                 botMessage.innerHTML = `
-                                    <strong>Price Recommendations:</strong><br>
+                                    Price Recommendations:<br>
                                     Final Price: LKR ${details["Total Price"]}.00<br>
                                     Downpayment: LKR ${details["Downpayment"]}.00<br>
                                     <br>To confirm, please type 'Yes' and click 'Enter' Key on your keyboard.
@@ -527,10 +527,10 @@ document.addEventListener("DOMContentLoaded", () => {
                                     const botMessage = document.createElement('div');
                                     botMessage.className = 'chat-message bot';
                                     botMessage.innerHTML = `
-                                        <strong>Congratulations!</strong><br>
+                                        Congratulations!<br>
                                         You have confirmed to buy the vehicle.<br>
                                         <br>
-                                        <strong>Agreement Details:</strong><br>
+                                        Agreement Details:<br>
                                         Brand: ${vehicleDetails.brand}<br>
                                         Model: ${vehicleDetails.model}<br>
                                         Type: ${vehicleDetails.type}<br>
@@ -592,7 +592,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                 const botMessage = document.createElement('div');
                                 botMessage.className = 'chat-message bot';
                                 botMessage.innerHTML = `
-                                    <strong>Installment Details:</strong><br>
+                                    Installment Details:<br>
                                     Price: LKR ${details.Price}.00<br>
                                     Tax: LKR ${details.Tax}.00<br>
                                     Total Price: LKR ${details["Total Price"]}.00<br>
@@ -702,130 +702,117 @@ function getCSRFToken() {
 
 
 
-// Function to render vehicle data as tables
 const renderVehicleData = (vehicles) => {
     const chatBox = document.getElementById('chat-box');
 
-    vehicles.forEach(vehicle => {
-        // Create a heading for the vehicle name
-        const vehicleName = document.createElement('h3');
-        vehicleName.textContent = `Vehicle Name: ${vehicle.name}`;
-        chatBox.appendChild(vehicleName);
+    // Ensure at least 10 rows are displayed
+    const minimumRows = 10;
+    const paddedVehicles = [...vehicles];
 
-        // Create a table for the vehicle details
-        const table = document.createElement('table');
-        table.border = "1";
-        table.className = 'specific-vehicle-table';
+    // Add placeholder rows if there are fewer than 10 vehicles
+    while (paddedVehicles.length < minimumRows) {
+        paddedVehicles.push({
+            Vehicle: 'N/A',
+            Price: 'N/A',
+            Year: 'N/A',
+            'Fuel Type': 'N/A',
+            Mileage: 'N/A'
+        });
+    }
 
-        // Create table header
-        const headerRow = document.createElement('tr');
-        const aspectHeader = document.createElement('th');
-        aspectHeader.textContent = 'Aspect';
-        const valueHeader = document.createElement('th');
-        valueHeader.textContent = 'Value';
-        headerRow.appendChild(aspectHeader);
-        headerRow.appendChild(valueHeader);
-        table.appendChild(headerRow);
+    // Create a table for the vehicle data
+    const table = document.createElement('table');
+    table.className = 'vehicle-table';
 
-        // Populate table rows with vehicle details
-        for (const [aspect, value] of Object.entries(vehicle.details)) {
-            const row = document.createElement('tr');
-            const aspectCell = document.createElement('td');
-            aspectCell.textContent = aspect;
-            const valueCell = document.createElement('td');
-            valueCell.textContent = value;
-            row.appendChild(aspectCell);
-            row.appendChild(valueCell);
-            table.appendChild(row);
-        }
-
-        // Append the table to the chat box
-        chatBox.appendChild(table);
+    // Create table header
+    const headerRow = document.createElement('tr');
+    ['Vehicle', 'Price', 'Year', 'Fuel Type', 'Mileage'].forEach(header => {
+        const th = document.createElement('th');
+        th.textContent = header;
+        headerRow.appendChild(th);
     });
+    table.appendChild(headerRow);
+
+    // Populate table rows with vehicle data
+    paddedVehicles.forEach(vehicle => {
+        const row = document.createElement('tr');
+        ['Vehicle', 'Price', 'Year', 'Fuel Type', 'Mileage'].forEach(key => {
+            const td = document.createElement('td');
+            td.textContent = vehicle[key] || 'N/A'; // Handle missing values
+            row.appendChild(td);
+        });
+        table.appendChild(row);
+    });
+
+    // Append the table to the chat box
+    const botResponse = document.createElement('div');
+    botResponse.className = 'chat-message bot';
+    botResponse.appendChild(table);
+    chatBox.appendChild(botResponse);
 
     // Scroll to the bottom of the chat box
     chatBox.scrollTop = chatBox.scrollHeight;
 };
 
-// Function to send a message to the server
-function sendMessage() {
+
+
+
+const sendMessage = () => {
     const chatBox = document.getElementById('chat-box');
     const userInput = document.getElementById('user-input');
     const message = userInput.value.trim();
 
     if (message) {
-        // Display user message
         const userMessage = document.createElement('div');
         userMessage.className = 'chat-message user';
         userMessage.textContent = message;
         chatBox.appendChild(userMessage);
 
-        // Clear input field
         userInput.value = '';
 
-        // Add loading indicator
         const loadingIndicator = document.createElement('div');
         loadingIndicator.className = 'loading-indicator';
         loadingIndicator.textContent = 'Typing...';
         chatBox.appendChild(loadingIndicator);
 
-        // Scroll to the bottom of the chat box
         chatBox.scrollTop = chatBox.scrollHeight;
 
-        // Check if the user typed "Options"
-        if (message.toLowerCase() === "options") {
-            // Remove loading indicator
-            chatBox.removeChild(loadingIndicator);
-
-            // Simulate the "Let's get started!" button click
-            const startButton = document.querySelector('.start-button');
-            if (startButton && startButton.onclick) {
-                startButton.onclick();
-            }
-            return;
-        }
-
-        // Send the message to the server
         fetch('/query/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCSRFToken(),
             },
-            body: JSON.stringify({ query: message }),
+            body: JSON.stringify({ query: message })
         })
         .then(response => response.json())
         .then(data => {
-            // Remove loading indicator
+            console.log("API Response:", data);
+
             chatBox.removeChild(loadingIndicator);
 
             if (data.status === "success") {
                 if (data.response) {
-                    // Handle common questions (e.g., greetings, FAQs)
                     const botMessage = document.createElement('div');
                     botMessage.className = 'chat-message bot';
                     botMessage.textContent = data.response;
                     chatBox.appendChild(botMessage);
-                } else if (data.vehicles) {
-                    // Handle vehicle-related questions (e.g., list, filter, compare)
-                    if (Array.isArray(data.vehicles) && data.vehicles.length > 0) {
-                        renderVehicleData(data.vehicles);
-                    } else {
-                        appendBotMessage('No vehicles found.');
-                    }
-                } else {
-                    // Handle unexpected success responses
-                    appendBotMessage('I am not sure how to respond to that.');
+                }
+
+                if (data.vehicle_details) {
+                    renderVehicleDetails(data.vehicle_details);
+                }
+
+                if (data.vehicles && Array.isArray(data.vehicles) && data.vehicles.length > 0) {
+                    renderVehicleData(data.vehicles);
                 }
             } else {
-                // Handle error responses
                 const botMessage = document.createElement('div');
                 botMessage.className = 'chat-message bot';
                 botMessage.textContent = data.message || 'Sorry, I could not process your request.';
                 chatBox.appendChild(botMessage);
             }
-        
-            // Scroll to the bottom of the chat box
+
             chatBox.scrollTop = chatBox.scrollHeight;
         })
         .catch(error => {
@@ -836,4 +823,41 @@ function sendMessage() {
             chatBox.appendChild(botMessage);
         });
     }
-}
+};
+
+// Function to render detailed vehicle information
+const renderVehicleDetails = (vehicleDetails) => {
+    const chatBox = document.getElementById('chat-box');
+
+    const detailsContainer = document.createElement('div');
+    detailsContainer.className = 'vehicle-details';
+
+    detailsContainer.innerHTML = `
+        <h3>${vehicleDetails.brand} ${vehicleDetails.model}</h3>
+        <p>Type: ${vehicleDetails.type}</p>
+        <p>Category: ${vehicleDetails.category}</p>
+        <p>Price: $${vehicleDetails.price}</p>
+        <p>Year: ${vehicleDetails.year}</p>
+        <p>Fuel Type: ${vehicleDetails.fuel_type}</p>
+        <p>Mileage: ${vehicleDetails.mileage} km/l</p>
+        <p>Engine Capacity: ${vehicleDetails.engine_capacity} cc</p>
+        <p>Fuel Tank Capacity: ${vehicleDetails.fuel_tank_capacity} liters</p>
+        <p>Seat Capacity: ${vehicleDetails.seat_capacity}</p>
+        <p>Transmission: ${vehicleDetails.transmission}</p>
+        <p>Safety Rating: ${vehicleDetails.safety_rating}</p>
+        <p>Maintenance Cost: ${vehicleDetails.maintenance_cost}</p>
+        <p>After Sales Service: ${vehicleDetails.after_sales_service}</p>
+        <p>Financing Options: ${vehicleDetails.financing_options}</p>
+        <p>Insurance Info: ${vehicleDetails.insurance_info}</p>
+        <p>Additional Features: ${vehicleDetails.additional_features}</p>
+        <p>Warranty: ${vehicleDetails.warranty}</p>
+        <p>Seller Name: ${vehicleDetails.seller_name}</p>
+        <p>Seller Contact: ${vehicleDetails.seller_contact}</p>
+        <p>Seller Location: ${vehicleDetails.seller_location}</p>
+        <p>Make Country: ${vehicleDetails.make_country}</p>
+        <p>Imported From: ${vehicleDetails.imported_from}</p>
+    `;
+
+    chatBox.appendChild(detailsContainer);
+    chatBox.scrollTop = chatBox.scrollHeight;
+};
