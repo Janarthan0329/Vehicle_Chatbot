@@ -182,7 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                         table.className = 'vehicle-table';
                         
                                         const headerRow = document.createElement('tr');
-                                        ['Brand', 'Model', 'Category', 'Fuel Type', 'Transmission', 'Year', 'Mileage', 'Specification'].forEach(header => {
+                                        ['Brand', 'Model','Type', 'Category', 'Fuel Type', 'Transmission', 'Year', 'Mileage', 'Specification'].forEach(header => {
                                             const th = document.createElement('th');
                                             th.textContent = header;
                                             headerRow.appendChild(th);
@@ -191,7 +191,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         
                                         vehicles.forEach(vehicle => {
                                             const row = document.createElement('tr');
-                                            ['brand', 'model', 'category', 'fuel_type', 'transmission', 'year', 'mileage'].forEach(key => {
+                                            ['brand', 'model', 'type', 'category', 'fuel_type', 'transmission', 'year', 'mileage'].forEach(key => {
                                                 const td = document.createElement('td');
                                                 td.textContent = vehicle[key] || 'N/A';
                                                 row.appendChild(td);
@@ -697,36 +697,372 @@ function getCSRFToken() {
     return null;
 }
 
+let currentStep = "default";
+let state = {
+    vehicleName: null, 
+};
+
+const sendMultiStepMessage = () => {
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('user-input');
+    const message = userInput.value.trim();
+
+    if (message) {
+        // Display user message
+        const userMessage = document.createElement('div');
+        userMessage.className = 'chat-message user';
+        userMessage.textContent = message;
+        chatBox.appendChild(userMessage);
+
+        userInput.value = '';
+
+        // Handle "start over" command
+        if (message.toLowerCase() === "start over") {
+            // Clear the chat
+            chatBox.innerHTML = '';
+
+            // Restart the flow
+            const botMessage1 = document.createElement('div');
+            botMessage1.className = 'chat-message bot';
+            botMessage1.textContent = "Hello!👋👋👋";
+            chatBox.appendChild(botMessage1);
+
+            const botMessage2 = document.createElement('div');
+            botMessage2.className = 'chat-message bot';
+            botMessage2.textContent = "Happy to help you create the best Conversational AI experience for your shopping!";
+            chatBox.appendChild(botMessage2);
+
+            const botMessage3 = document.createElement('div');
+            botMessage3.className = 'chat-message bot';
+            botMessage3.textContent = "Welcome! I am VROOMbot! How can I assist you today?";
+            chatBox.appendChild(botMessage3);
+
+            const botMessage4 = document.createElement('div');
+            botMessage4.className = 'chat-message bot';
+            botMessage4.innerHTML = "Just type <a href='#' id='options-link' style='color: yellow; font-size: 1.2em; text-decoration: none;'>'Options'</a> anywhere and Click 'Send' button to access easy options to get started!";
+            chatBox.appendChild(botMessage4);
+
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Reset the state
+            currentStep = "default";
+            state.vehicleName = null;
+
+            // Restart the Django server
+            restartDjangoServer();
+
+            return;
+        }
 
 
+        // Handle "Options" command
+        if (message.toLowerCase() === "options") {
+            // Trigger the "Let's get started!" button functionality
+            const startButton = document.querySelector('.start-button');
+            if (startButton && startButton.onclick) {
+                startButton.onclick();
+            }
+            return;
+        }
 
+
+        // Add loading indicator
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.className = 'loading-indicator';
+        loadingIndicator.textContent = 'Typing...';
+        chatBox.appendChild(loadingIndicator);
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // Check if the user is in the "Compare Vehicles" step
+        if (currentStep === "compare_vehicles") {
+            // Send the input to the /compare/ endpoint
+            fetch('/compare/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                },
+                body: JSON.stringify({ vehicles: message }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                chatBox.removeChild(loadingIndicator);
+
+                if (data.status === "success") {
+                    renderComparisonTable(data.comparison);
+
+                    // Display next options (e.g., "📊 View Specifications")
+                    if (data.next_options) {
+                        displayNextOptions(data.next_options);
+                    }
+                } else {
+                    const botMessage = document.createElement('div');
+                    botMessage.className = 'chat-message bot';
+                    botMessage.textContent = data.message;
+                    chatBox.appendChild(botMessage);
+                }
+
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                chatBox.removeChild(loadingIndicator);
+
+                const botMessage = document.createElement('div');
+                botMessage.className = 'chat-message bot';
+                botMessage.textContent = 'An error occurred. Please try again later.';
+                chatBox.appendChild(botMessage);
+
+                // Scroll to the bottom of the chat box
+                chatBox.scrollTop = chatBox.scrollHeight;   
+            });
+        } else if (currentStep === "view_specifications") {
+            // Send the input to the /specifications/ endpoint
+            fetch('/specifications/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                },
+                body: JSON.stringify({ vehicle_name: message }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                chatBox.removeChild(loadingIndicator);
+
+                if (data.status === "success") {
+                    renderSpecifications(data.specifications);
+
+                    // Display next options (e.g., "💰 Financial Options")
+                    if (data.next_options) {
+                        displayNextOptions(data.next_options);
+                    }
+                } else {
+                    const botMessage = document.createElement('div');
+                    botMessage.className = 'chat-message bot';
+                    botMessage.textContent = data.message;
+                    chatBox.appendChild(botMessage);
+                }
+
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                chatBox.removeChild(loadingIndicator);
+
+                const botMessage = document.createElement('div');
+                botMessage.className = 'chat-message bot';
+                botMessage.textContent = 'An error occurred. Please try again later.';
+                chatBox.appendChild(botMessage);
+
+                // Scroll to the bottom of the chat box
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
+        } else if (currentStep === "financial_options") {
+            // Check if the user has already provided the vehicle name
+            if (!state.vehicleName) {
+                state.vehicleName = message; // Save the vehicle name
+                const botMessage = document.createElement('div');
+                botMessage.className = 'chat-message bot';
+                botMessage.textContent = "Please provide the installment months (e.g., 12, 24, 36, 48).";
+                chatBox.appendChild(botMessage);
+            } else {
+                // Send the vehicle name and installment months to the backend
+                fetch('/financial_options/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken(),
+                    },
+                    body: JSON.stringify({
+                        vehicle_name: state.vehicleName,
+                        installment_months: parseInt(message, 10) // Convert the message to an integer
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    chatBox.removeChild(loadingIndicator);
+
+                    if (data.status === "success") {
+                        const botMessage = document.createElement('div');
+                        botMessage.className = 'chat-message bot';
+                        botMessage.textContent = "Here are the finance details for the selected vehicle:";
+                        chatBox.appendChild(botMessage);
+
+                        renderSpecifications(data.finance_details); 
+
+                        // Display next options (e.g., "💰 Financial Options")
+                        if (data.next_options) {
+                            displayNextOptions(data.next_options);
+                        }
+                    } else {
+                        const botMessage = document.createElement('div');
+                        botMessage.className = 'chat-message bot';
+                        botMessage.textContent = data.message;
+                        chatBox.appendChild(botMessage);
+                    }
+
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    chatBox.removeChild(loadingIndicator);
+
+                    const botMessage = document.createElement('div');
+                    botMessage.className = 'chat-message bot';
+                    botMessage.textContent = 'An error occurred. Please try again later.';
+                    chatBox.appendChild(botMessage);
+                });
+
+                // Reset the state after sending the request
+                state.vehicleName = null;
+            }
+        } else if (currentStep === "choose_vehicle") {
+            fetch('/choose_vehicle/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                },
+                body: JSON.stringify({ vehicle_name: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Response from /choose_vehicle/:", data); // Debugging log
+        
+                chatBox.removeChild(loadingIndicator);
+        
+                if (data.status === "success") {
+                    const botMessage = document.createElement('div');
+                    botMessage.className = 'chat-message bot';
+                
+                    // Use innerHTML to format the response with line breaks and emojis
+                    botMessage.innerHTML = `
+                        🎯 <strong>You’ve selected:</strong> <span style="color: #007BFF;">Honda City Sedan</span><br>
+                        📞 <strong>Seller Info:</strong><br>
+                        • <strong>Dealer:</strong> SriLankaCars<br>
+                        • <strong>Phone:</strong> <a href="tel:94760364691" style="color: #007BFF; text-decoration: none;">94760364691</a><br>
+                        • <strong>Email:</strong> <a href="mailto:srilankacars@gmail.com" style="color: #007BFF; text-decoration: none;">srilankacars@gmail.com</a><br>
+                        • <strong>Location:</strong> Kandy<br>
+                        <hr style="border: 1px solid #ccc; margin: 10px 0;">
+                        ❓ <strong>Would you recommend this vehicle to others?</strong><br>
+                        <p class="option" style="margin: 5px;">👍 Yes</p>
+                        <p class="option" style="margin: 5px;">👎 No</p>
+                    `;
+                
+                    chatBox.appendChild(botMessage);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+        
+                    // Display recommendation options (👍 Yes, 👎 No)
+                    displayNextOptions(["👍 Yes", "👎 No"]);
+                } else {
+                    const botMessage = document.createElement('div');
+                    botMessage.className = 'chat-message bot';
+                    botMessage.textContent = data.message || 'Sorry, I could not process your request.';
+                    chatBox.appendChild(botMessage);
+                }
+        
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                chatBox.removeChild(loadingIndicator);
+        
+                const botMessage = document.createElement('div');
+                botMessage.className = 'chat-message bot';
+                botMessage.textContent = 'An error occurred. Please try again later.';
+                chatBox.appendChild(botMessage);
+            });
+        } else {
+            // Send the message to the multi-step interaction endpoint
+            fetch('/multi_step_interaction/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                },
+                body: JSON.stringify({ query: message, user_id: 'default_user' }) // Replace 'default_user' with dynamic user ID if needed
+            })
+            .then(response => response.json())
+            .then(data => {
+                chatBox.removeChild(loadingIndicator);
+
+                if (data.status === "success") {
+                    // Display bot response
+                    const botMessage = document.createElement('div');
+                    botMessage.className = 'chat-message bot';
+                    botMessage.textContent = data.response;
+                    chatBox.appendChild(botMessage);
+
+                    // If vehicles are included in the response, render them
+                    if (data.vehicles && Array.isArray(data.vehicles)) {
+                        renderVehicleData(data.vehicles);
+                    }
+
+                    // If next_options are included in the response, display them
+                    if (data.next_options) {
+                        displayNextOptions(data.next_options);
+                    }
+                } else {
+                    const botMessage = document.createElement('div');
+                    botMessage.className = 'chat-message bot';
+                    botMessage.textContent = data.message || 'Sorry, I could not process your request.';
+                    chatBox.appendChild(botMessage);
+                }
+
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                chatBox.removeChild(loadingIndicator);
+
+                const botMessage = document.createElement('div');
+                botMessage.className = 'chat-message bot';
+                botMessage.textContent = 'An error occurred. Please try again later.';
+                chatBox.appendChild(botMessage);
+
+                // Scroll to the bottom of the chat box
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
+
+            // Scroll to the bottom of the chat box
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    }
+};
+
+const restartDjangoServer = () => {
+    fetch('/restart_server/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken(),
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            console.log("Django server restarted successfully.");
+        } else {
+            console.error("Failed to restart Django server:", data.message);
+        }
+    })
+    .catch(error => {
+        console.error("Error restarting Django server:", error);
+    });
+};
 
 
 const renderVehicleData = (vehicles) => {
     const chatBox = document.getElementById('chat-box');
 
-    // Ensure at least 10 rows are displayed
-    const minimumRows = 10;
-    const paddedVehicles = [...vehicles];
-
-    // Add placeholder rows if there are fewer than 10 vehicles
-    while (paddedVehicles.length < minimumRows) {
-        paddedVehicles.push({
-            Vehicle: 'N/A',
-            Price: 'N/A',
-            Year: 'N/A',
-            'Fuel Type': 'N/A',
-            Mileage: 'N/A'
-        });
-    }
-
-    // Create a table for the vehicle data
     const table = document.createElement('table');
     table.className = 'vehicle-table';
 
     // Create table header
     const headerRow = document.createElement('tr');
-    ['Vehicle', 'Price', 'Year', 'Fuel Type', 'Mileage'].forEach(header => {
+    ['Vehicle', 'Price', 'Year', 'Fuel Type', 'Mileage', 'Transmission'].forEach(header => {
         const th = document.createElement('th');
         th.textContent = header;
         headerRow.appendChild(th);
@@ -734,11 +1070,11 @@ const renderVehicleData = (vehicles) => {
     table.appendChild(headerRow);
 
     // Populate table rows with vehicle data
-    paddedVehicles.forEach(vehicle => {
+    vehicles.forEach(vehicle => {
         const row = document.createElement('tr');
-        ['Vehicle', 'Price', 'Year', 'Fuel Type', 'Mileage'].forEach(key => {
+        ['Vehicle', 'Price', 'Year', 'Fuel Type', 'Mileage', 'Transmission'].forEach(key => {
             const td = document.createElement('td');
-            td.textContent = vehicle[key] || 'N/A'; // Handle missing values
+            td.textContent = vehicle[key] || 'N/A';
             row.appendChild(td);
         });
         table.appendChild(row);
@@ -750,114 +1086,183 @@ const renderVehicleData = (vehicles) => {
     botResponse.appendChild(table);
     chatBox.appendChild(botResponse);
 
+    chatBox.scrollTop = chatBox.scrollHeight;
+};
+
+
+function displayNextOptions(options) {
+    const chatBox = document.getElementById('chat-box');
+
+    // Create a container for the options
+    const optionsContainer = document.createElement('div');
+    optionsContainer.className = 'options-container';
+
+    // Create a button for each option
+    options.forEach(option => {
+        const optionButton = document.createElement('button');
+        optionButton.className = 'option-button';
+        optionButton.textContent = option;
+
+        // Add click event listener for each button
+        optionButton.onclick = () => {
+            // Simulate user selecting an option
+            const userMessage = document.createElement('div');
+            userMessage.className = 'chat-message user';
+            userMessage.textContent = option;
+            chatBox.appendChild(userMessage);
+
+            // Scroll to the bottom of the chat box
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Handle the selected option
+            handleOptionSelection(option);
+        };
+
+        optionsContainer.appendChild(optionButton);
+    });
+
+    // Append the options container to the chat box
+    chatBox.appendChild(optionsContainer);
+
     // Scroll to the bottom of the chat box
     chatBox.scrollTop = chatBox.scrollHeight;
-};
+}
 
 
 
-
-const sendMessage = () => {
+function handleOptionSelection(option) {
     const chatBox = document.getElementById('chat-box');
     const userInput = document.getElementById('user-input');
-    const message = userInput.value.trim();
 
-    if (message) {
-        const userMessage = document.createElement('div');
-        userMessage.className = 'chat-message user';
-        userMessage.textContent = message;
-        chatBox.appendChild(userMessage);
+    if (option === "🔍 Compare Vehicles") {
+        currentStep = "compare_vehicles"; // Update the current step
 
-        userInput.value = '';
-
-        const loadingIndicator = document.createElement('div');
-        loadingIndicator.className = 'loading-indicator';
-        loadingIndicator.textContent = 'Typing...';
-        chatBox.appendChild(loadingIndicator);
+        const botMessage = document.createElement('div');
+        botMessage.className = 'chat-message bot';
+        botMessage.textContent = "Please specify the two vehicles you'd like to compare (e.g., 'Toyota Camry SUV Van, Toyota Yaris SUV SUV').";
+        chatBox.appendChild(botMessage);
 
         chatBox.scrollTop = chatBox.scrollHeight;
+    } else if (option === "📊 View Specifications") {
+        currentStep = "view_specifications"; // Update the current step
 
-        fetch('/query/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken(),
-            },
-            body: JSON.stringify({ query: message })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log("API Response:", data);
+        const botMessage = document.createElement('div');
+        botMessage.className = 'chat-message bot';
+        botMessage.textContent = "Please provide the vehicle name (e.g., 'Toyota Camry SUV Van').";
+        chatBox.scrollTop = chatBox.scrollHeight;
+        chatBox.appendChild(botMessage);
 
-            chatBox.removeChild(loadingIndicator);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    } else if (option === "💰 Financial Options") {
+        currentStep = "financial_options"; // Update the current step
 
-            if (data.status === "success") {
-                if (data.response) {
-                    const botMessage = document.createElement('div');
-                    botMessage.className = 'chat-message bot';
-                    botMessage.textContent = data.response;
-                    chatBox.appendChild(botMessage);
-                }
+        const botMessage = document.createElement('div');
+        botMessage.className = 'chat-message bot';
+        botMessage.textContent = "Please provide the vehicle name (e.g., 'Toyota Camry SUV Van').";
+        chatBox.scrollTop = chatBox.scrollHeight;
+        chatBox.appendChild(botMessage);
 
-                if (data.vehicle_details) {
-                    renderVehicleDetails(data.vehicle_details);
-                }
+        chatBox.scrollTop = chatBox.scrollHeight;
+    } else if (option === "✅ Choose a Vehicle") { 
+        currentStep = "choose_vehicle"; // Update the current step
 
-                if (data.vehicles && Array.isArray(data.vehicles) && data.vehicles.length > 0) {
-                    renderVehicleData(data.vehicles);
-                }
-            } else {
-                const botMessage = document.createElement('div');
-                botMessage.className = 'chat-message bot';
-                botMessage.textContent = data.message || 'Sorry, I could not process your request.';
-                chatBox.appendChild(botMessage);
-            }
+        const botMessage = document.createElement('div');
+        botMessage.className = 'chat-message bot';
+        botMessage.textContent = "Please provide the vehicle name (e.g., 'Toyota Camry SUV Van').";
+        chatBox.scrollTop = chatBox.scrollHeight;
+        chatBox.appendChild(botMessage);
 
-            chatBox.scrollTop = chatBox.scrollHeight;
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            const botMessage = document.createElement('div');
-            botMessage.className = 'chat-message bot';
-            botMessage.textContent = 'An error occurred. Please try again later.';
-            chatBox.appendChild(botMessage);
-        });
+        chatBox.scrollTop = chatBox.scrollHeight;
+    } else if (option === "👍 Yes") {
+        // Handle "Yes" response
+        const botMessage = document.createElement('div');
+        botMessage.className = 'chat-message bot';
+        botMessage.innerHTML = `
+            🎉 Thank you for your feedback! I'm glad I could help.<br>
+            If you’d like to search again, just type "start over" anytime.<br>
+            Have a smooth ride ahead! 🚗✨
+        `;
+        chatBox.appendChild(botMessage);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    } else if (option === "👎 No") {
+        // Handle "No" response
+        const botMessage = document.createElement('div');
+        botMessage.className = 'chat-message bot';
+        botMessage.textContent = "I'm sorry to hear that. Let me know how I can assist you further.";
+        chatBox.appendChild(botMessage);
+        chatBox.scrollTop = chatBox.scrollHeight;
     }
-};
+}
 
-// Function to render detailed vehicle information
-const renderVehicleDetails = (vehicleDetails) => {
+
+function renderComparisonTable(comparison) {
     const chatBox = document.getElementById('chat-box');
+    const table = document.createElement('table');
+    table.className = 'comparison-table';
 
-    const detailsContainer = document.createElement('div');
-    detailsContainer.className = 'vehicle-details';
+    // Create table header
+    const headerRow = document.createElement('tr');
+    ['Feature', 'Vehicle 1', 'Vehicle 2'].forEach(header => {
+        const th = document.createElement('th');
+        th.textContent = header;
+        headerRow.appendChild(th);
+    });
+    table.appendChild(headerRow);
 
-    detailsContainer.innerHTML = `
-        <h3>${vehicleDetails.brand} ${vehicleDetails.model}</h3>
-        <p>Type: ${vehicleDetails.type}</p>
-        <p>Category: ${vehicleDetails.category}</p>
-        <p>Price: $${vehicleDetails.price}</p>
-        <p>Year: ${vehicleDetails.year}</p>
-        <p>Fuel Type: ${vehicleDetails.fuel_type}</p>
-        <p>Mileage: ${vehicleDetails.mileage} km/l</p>
-        <p>Engine Capacity: ${vehicleDetails.engine_capacity} cc</p>
-        <p>Fuel Tank Capacity: ${vehicleDetails.fuel_tank_capacity} liters</p>
-        <p>Seat Capacity: ${vehicleDetails.seat_capacity}</p>
-        <p>Transmission: ${vehicleDetails.transmission}</p>
-        <p>Safety Rating: ${vehicleDetails.safety_rating}</p>
-        <p>Maintenance Cost: ${vehicleDetails.maintenance_cost}</p>
-        <p>After Sales Service: ${vehicleDetails.after_sales_service}</p>
-        <p>Financing Options: ${vehicleDetails.financing_options}</p>
-        <p>Insurance Info: ${vehicleDetails.insurance_info}</p>
-        <p>Additional Features: ${vehicleDetails.additional_features}</p>
-        <p>Warranty: ${vehicleDetails.warranty}</p>
-        <p>Seller Name: ${vehicleDetails.seller_name}</p>
-        <p>Seller Contact: ${vehicleDetails.seller_contact}</p>
-        <p>Seller Location: ${vehicleDetails.seller_location}</p>
-        <p>Make Country: ${vehicleDetails.make_country}</p>
-        <p>Imported From: ${vehicleDetails.imported_from}</p>
-    `;
+    // Populate table rows with comparison data
+    comparison.Feature.forEach((feature, index) => {
+        const row = document.createElement('tr');
 
-    chatBox.appendChild(detailsContainer);
+        const featureCell = document.createElement('td');
+        featureCell.textContent = feature;
+        row.appendChild(featureCell);
+
+        const vehicle1Cell = document.createElement('td');
+        vehicle1Cell.textContent = comparison[Object.keys(comparison)[1]][index];
+        row.appendChild(vehicle1Cell);
+
+        const vehicle2Cell = document.createElement('td');
+        vehicle2Cell.textContent = comparison[Object.keys(comparison)[2]][index];
+        row.appendChild(vehicle2Cell);
+
+        table.appendChild(row);
+    });
+
+    // Append the table to the chat box
+    const botResponse = document.createElement('div');
+    botResponse.className = 'chat-message bot';
+    botResponse.appendChild(table);
+    chatBox.appendChild(botResponse);
+
     chatBox.scrollTop = chatBox.scrollHeight;
-};
+}
+
+
+function renderSpecifications(specifications) {
+    const chatBox = document.getElementById('chat-box');
+    const table = document.createElement('table');
+    table.className = 'specifications-table';
+
+    // Populate table rows with specifications
+    for (const [key, value] of Object.entries(specifications)) {
+        const row = document.createElement('tr');
+
+        const keyCell = document.createElement('td');
+        keyCell.textContent = key;
+        row.appendChild(keyCell);
+
+        const valueCell = document.createElement('td');
+        valueCell.textContent = value;
+        row.appendChild(valueCell);
+
+        table.appendChild(row);
+    }
+
+    // Append the table to the chat box
+    const botResponse = document.createElement('div');
+    botResponse.className = 'chat-message bot';
+    botResponse.appendChild(table);
+    chatBox.appendChild(botResponse);
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+}

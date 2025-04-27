@@ -1,5 +1,5 @@
 from django.http import JsonResponse
-from .Vehicle_Chatbot import query_vehicle_data, get_vehicle_table_data
+from .Vehicle_Chatbot import  get_vehicle_table_data
 from django.shortcuts import render
 import json
 from django.views.decorators.csrf import csrf_exempt
@@ -11,6 +11,12 @@ import joblib
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
+from .Vehicle_Chatbot1 import handle_interaction, query_vehicle_data
+from .recomendation_engine import compare, get_vehicle_specifications, calculate_finance_details, get_seller_info
+from .utils import load_vehicle_data
+
+# Load the dataset globally
+df = load_vehicle_data("./data/vehicles_augmented.xlsx")
 
 def home_view(request):
     """
@@ -27,6 +33,38 @@ def default_chatbot_view(request):
 logger = logging.getLogger(__name__)
 
 
+@csrf_exempt
+def multi_step_interaction_view(request):
+    """
+    Django view to handle multi-step interaction for vehicle recommendations.
+    """
+    if request.method == "POST":
+        try:
+            # Parse the JSON body
+            body = json.loads(request.body)
+            query = body.get("query", "")
+            user_id = body.get("user_id", "default_user")  
+
+            if not query:
+                return JsonResponse({"status": "error", "message": "Query parameter is required."})
+
+            # Import the dataframe and pass it to handle_interaction
+            from .Vehicle_Chatbot1 import handle_interaction, df
+            result = handle_interaction(query, user_id, df)
+
+            # Ensure result is a dictionary
+            if not isinstance(result, dict):
+                return JsonResponse({"status": "error", "message": "Invalid response format from handle_interaction."})
+
+            return JsonResponse(result)
+        except json.JSONDecodeError:
+            return JsonResponse({"status": "error", "message": "Invalid JSON body."})
+        except Exception as e:
+            logger.error(f"An error occurred: {str(e)}")
+            return JsonResponse({"status": "error", "message": "An unexpected error occurred."})
+    else:
+        return JsonResponse({"status": "error", "message": "Only POST requests are allowed."})
+
 
 
 @csrf_exempt
@@ -39,72 +77,153 @@ def vehicle_query_view(request):
             # Parse the JSON body
             body = json.loads(request.body)
             query = body.get("query", "")
-            logger.info(f"Received query: {query}")
-            
+            user_id = body.get("user_id", "default_user") 
+
             if not query:
-                logger.warning("Query parameter is missing in the request.")
                 return JsonResponse({"status": "error", "message": "Query parameter is required."})
-            
+
             # Call the query_vehicle_data function
-            result = query_vehicle_data(query)
-            logger.info(f"Query result: {result}")
+            result = query_vehicle_data(query, user_id)
             return JsonResponse(result)
         except json.JSONDecodeError:
-            logger.error("Invalid JSON body.")
             return JsonResponse({"status": "error", "message": "Invalid JSON body."})
         except Exception as e:
-            logger.error(f"An unexpected error occurred: {str(e)}")
+            logger.error(f"An error occurred: {str(e)}")
             return JsonResponse({"status": "error", "message": "An unexpected error occurred."})
     else:
-        logger.error("Invalid request method.")
         return JsonResponse({"status": "error", "message": "Only POST requests are allowed."})
-    
-    
-    
-    
-# BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# # Load everything once at the top
-# intent_classifier = joblib.load(os.path.join(BASE_DIR, "Chatbot/query_models", "intent_classifier.pkl"))
-# embedder = joblib.load(os.path.join(BASE_DIR, "Chatbot/query_models", "semantic_embedder.pkl"))
-# index = faiss.read_index(os.path.join(BASE_DIR, "Chatbot/query_models", "vehicle_faiss_index.index"))
-# vehicle_texts = pd.read_csv(os.path.join(BASE_DIR, "Chatbot/query_models", "vehicle_combined_texts.csv"))['combined_text'].tolist()
 
-# @csrf_exempt
-# def vehicle_query_view(request):
-#     if request.method == "POST":
-#         try:
-#             data = json.loads(request.body)
-#             query = data.get("query", "").strip()
-#             if not query:
-#                 return JsonResponse({"status": "error", "message": "Empty query"})
 
-#             # Predict intent
-#             predicted_intent = intent_classifier.predict([query])[0]
+@csrf_exempt
+def compare_view(request):
+    if request.method == "POST":
+        try:
+            body = json.loads(request.body)
+            vehicles = body.get("vehicles", "")
+            vehicle_names = [v.strip() for v in vehicles.split(",")]
 
-#             # Embed and search
-#             query_vector = embedder.encode([query])
-#             _, top_k_indices = index.search(np.array(query_vector), k=3)
-#             matches = [vehicle_texts[i] for i in top_k_indices[0]]
+            if len(vehicle_names) != 2:
+                return JsonResponse({"status": "error", "message": "Please provide exactly two vehicle names separated by a comma."})
 
-#             # Format result
-#             formatted = format_response(predicted_intent, matches)
-#             return JsonResponse({"status": "success", "response": formatted})
+            vehicle1, vehicle2 = vehicle_names
+            result = compare(vehicle1, vehicle2, df)
 
-#         except Exception as e:
-#             return JsonResponse({"status": "error", "message": str(e)})
-#     else:
-#         return JsonResponse({"status": "error", "message": "Only POST requests allowed"})
+            # Ensure result is a dictionary
+            if not isinstance(result, dict):
+                return JsonResponse(result, safe=False)
 
-# def format_response(intent, matches):
-#     response = f"Intent Detected: {intent.replace('_', ' ').title()}\n\n"
-#     for idx, match in enumerate(matches, 1):
-#         response += f"---\nVehicle {idx}:\n{match.strip()}\n"
-#     return response
+            return JsonResponse(result)
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": f"An error occurred: {str(e)}"})
+    return JsonResponse({"status": "error", "message": "Invalid request method. Please use POST."})
 
 
 
 
+@csrf_exempt
+def specifications_view(request):
+    if request.method == "POST":
+        try:
+            body = json.loads(request.body)
+            vehicle_name = body.get("vehicle_name", "")
+
+            if not vehicle_name:
+                return JsonResponse({"status": "error", "message": "The 'vehicle_name' parameter is required."})
+
+            result = get_vehicle_specifications(vehicle_name, df)
+            return JsonResponse(result)
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": f"An error occurred: {str(e)}"})
+    return JsonResponse({"status": "error", "message": "Invalid request method. Please use POST."})
+
+
+@csrf_exempt
+def financial_options_view(request):
+    """
+    Django view to handle financial options requests.
+    """
+    if request.method == "POST":
+        try:
+            body = json.loads(request.body)
+            vehicle_name = body.get("vehicle_name", "").strip()
+            installment_months = body.get("installment_months", None)
+
+            if not vehicle_name:
+                return JsonResponse({"status": "error", "message": "The 'vehicle_name' parameter is required."})
+
+            if installment_months not in [12, 24, 36, 48]:
+                return JsonResponse({"status": "error", "message": "Invalid 'installment_months'. Please choose from 12, 24, 36, or 48."})
+
+            # Calculate finance details
+            result = calculate_finance_details(vehicle_name, installment_months, df)
+
+            return JsonResponse(result)
+        except json.JSONDecodeError:
+            return JsonResponse({"status": "error", "message": "Invalid JSON body."})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": f"An error occurred: {str(e)}"})
+    return JsonResponse({"status": "error", "message": "Invalid request method. Please use POST."})
+
+
+@csrf_exempt
+def choose_vehicle_view(request):
+    """
+    Django view to handle the selection of a vehicle and provide seller information.
+    """
+    if request.method == "POST":
+        try:
+            # Parse the JSON body
+            body = json.loads(request.body)
+            vehicle_name = body.get("vehicle_name", "").strip()
+
+            if not vehicle_name:
+                return JsonResponse({"status": "error", "message": "The 'vehicle_name' parameter is required."})
+
+            # Fetch seller information for the selected vehicle
+            result = get_seller_info(vehicle_name, df)
+
+            if result["status"] == "error":
+                return JsonResponse({"status": "error", "message": result["message"]})
+
+            seller_info = result["seller_info"]
+            response = {
+                "status": "success",
+                "response": f"""
+🎯 You’ve selected: {seller_info['Vehicle Name']}
+📞 Seller Info:
+• Dealer: {seller_info['Dealer']}
+• Phone: {seller_info['Phone']}
+• Email: {seller_info['Email']}
+• Location: {seller_info['Location']}
+________________________________________
+❓Would you recommend this vehicle to others?
+👍 Yes
+👎 No
+"""
+            }
+            return JsonResponse(response)
+        except json.JSONDecodeError:
+            return JsonResponse({"status": "error", "message": "Invalid JSON body."})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": f"An error occurred: {str(e)}"})
+    return JsonResponse({"status": "error", "message": "Invalid request method. Please use POST."})
+
+
+
+@csrf_exempt
+def restart_server(request):
+    """
+    Django view to restart the server.
+    """
+    if request.method == "POST":
+        try:
+            # Restart the Django server
+            os.system("python manage.py runserver")
+            return JsonResponse({"status": "success", "message": "Server restarted successfully."})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": f"Failed to restart server: {str(e)}"})
+    return JsonResponse({"status": "error", "message": "Invalid request method. Please use POST."})
 
 
 @csrf_exempt
@@ -130,9 +249,6 @@ def get_vehicle_table_view(request):
     else:
         logger.error("Invalid request method.")
         return JsonResponse({"status": "error", "message": "Only POST requests are allowed."})
-
-
-
 
 
 
