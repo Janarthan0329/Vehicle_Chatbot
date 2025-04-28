@@ -721,26 +721,11 @@ const sendMultiStepMessage = () => {
             // Clear the chat
             chatBox.innerHTML = '';
 
-            // Restart the flow
-            const botMessage1 = document.createElement('div');
-            botMessage1.className = 'chat-message bot';
-            botMessage1.textContent = "Hello!👋👋👋";
-            chatBox.appendChild(botMessage1);
-
-            const botMessage2 = document.createElement('div');
-            botMessage2.className = 'chat-message bot';
-            botMessage2.textContent = "Happy to help you create the best Conversational AI experience for your shopping!";
-            chatBox.appendChild(botMessage2);
-
-            const botMessage3 = document.createElement('div');
-            botMessage3.className = 'chat-message bot';
-            botMessage3.textContent = "Welcome! I am VROOMbot! How can I assist you today?";
-            chatBox.appendChild(botMessage3);
-
-            const botMessage4 = document.createElement('div');
-            botMessage4.className = 'chat-message bot';
-            botMessage4.innerHTML = "Just type <a href='#' id='options-link' style='color: yellow; font-size: 1.2em; text-decoration: none;'>'Options'</a> anywhere and Click 'Send' button to access easy options to get started!";
-            chatBox.appendChild(botMessage4);
+            // Display loading indicator
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'loading-indicator';
+            loadingIndicator.textContent = 'Restarting...';
+            chatBox.appendChild(loadingIndicator);
 
             chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -1044,6 +1029,10 @@ const restartDjangoServer = () => {
     .then(data => {
         if (data.status === "success") {
             console.log("Django server restarted successfully.");
+            // Refresh the page after the server restarts
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
         } else {
             console.error("Failed to restart Django server:", data.message);
         }
@@ -1139,7 +1128,7 @@ function handleOptionSelection(option) {
 
         const botMessage = document.createElement('div');
         botMessage.className = 'chat-message bot';
-        botMessage.textContent = "Please specify the two vehicles you'd like to compare (e.g., 'Toyota Camry SUV Van, Toyota Yaris SUV SUV').";
+        botMessage.textContent = "Please specify the two vehicles you'd like to compare (e.g., 'Toyota Camry SUV Van and Toyota Yaris SUV SUV').";
         chatBox.appendChild(botMessage);
 
         chatBox.scrollTop = chatBox.scrollHeight;
@@ -1188,7 +1177,7 @@ function handleOptionSelection(option) {
         // Handle "No" response
         const botMessage = document.createElement('div');
         botMessage.className = 'chat-message bot';
-        botMessage.textContent = "I'm sorry to hear that. Let me know how I can assist you further.";
+        botMessage.textContent = "I'm sorry to hear that. Let me know how I can assist you further. Just type \"start over\" anytime. Have a smooth ride ahead! 🚗✨";
         chatBox.appendChild(botMessage);
         chatBox.scrollTop = chatBox.scrollHeight;
     }

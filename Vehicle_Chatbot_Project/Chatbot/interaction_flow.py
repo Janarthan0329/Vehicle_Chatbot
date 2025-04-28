@@ -104,15 +104,15 @@ def handle_interaction(query, user_id, df):
     if state["step"] == 5:
         if query.lower() == "🔍 compare vehicles":
             state["step"] += 1
-            return {"status": "success", "response": "Please specify the two vehicles you'd like to compare (e.g., 'Toyota Corolla Sedan, Honda Civic Sedan')."}
+            return {"status": "success", "response": "Please specify the two vehicles you'd like to compare (e.g., 'Toyota Corolla Sedan and Honda Civic Sedan')."}
 
     # Step 7: Process vehicle comparison
     if state["step"] == 6:
-        vehicles_to_compare = query.strip().split(",")
+        vehicles_to_compare = query.lower().split(" and ")
         if len(vehicles_to_compare) != 2:
             return {
                 "status": "error",
-                "response": "Please provide exactly two vehicle names separated by a comma (e.g., 'Toyota Corolla Sedan, Honda Civic Sedan')."
+                "response": "Please provide exactly two vehicle names separated by 'and' keyword (e.g., 'Toyota Corolla Sedan and Honda Civic Sedan')."
             }
 
         vehicle1, vehicle2 = [v.strip() for v in vehicles_to_compare]

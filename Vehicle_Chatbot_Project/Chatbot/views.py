@@ -15,6 +15,7 @@ from .Vehicle_Chatbot1 import handle_interaction, query_vehicle_data
 from .recomendation_engine import compare, get_vehicle_specifications, calculate_finance_details, get_seller_info
 from .utils import load_vehicle_data
 
+
 # Load the dataset globally
 df = load_vehicle_data("./data/vehicles_augmented.xlsx")
 
@@ -101,10 +102,10 @@ def compare_view(request):
         try:
             body = json.loads(request.body)
             vehicles = body.get("vehicles", "")
-            vehicle_names = [v.strip() for v in vehicles.split(",")]
+            vehicle_names = [v.strip() for v in vehicles.split("and")]
 
             if len(vehicle_names) != 2:
-                return JsonResponse({"status": "error", "message": "Please provide exactly two vehicle names separated by a comma."})
+                return JsonResponse({"status": "error", "message": "Please provide exactly two vehicle names separated by the 'and' keyword."})
 
             vehicle1, vehicle2 = vehicle_names
             result = compare(vehicle1, vehicle2, df)
