@@ -12,3 +12,4 @@ transformers
 
 django
 markdown2
+mysql-connector-python

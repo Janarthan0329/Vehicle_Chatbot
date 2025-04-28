@@ -1,4 +1,5 @@
 import pandas as pd
+from .database_handler import  store_vehicle
 
 user_state = {}
 
@@ -230,4 +231,22 @@ def handle_interaction(query, user_id, df):
             f"Would you recommend this vehicle to others?\n"
             f"Yes or No"
         )
+        state["selected_vehicle"] = seller_info  # Save vehicle info in state
+        state["step"] += 1  # Move to the next step
         return {"status": "success", "response": response}
+
+
+    if state["step"] == 14:
+        if query.strip().lower() == "yes":
+            # Path to the Excel file
+            excel_file_path = "./Chatbot/data/vehicles_augmented.xlsx"
+
+            # Get the selected vehicle name
+            selected_vehicle_name = state.get("selected_vehicle", {}).get("Vehicle Name")
+            if selected_vehicle_name:
+                store_vehicle(selected_vehicle_name, excel_file_path)
+                return {"status": "success", "response": "Thank you for your recommendation! The score has been updated."}
+            else:
+                return {"status": "error", "response": "No vehicle selected to recommend."}
+
+        return {"status": "success", "response": "Thank you for your feedback!"}

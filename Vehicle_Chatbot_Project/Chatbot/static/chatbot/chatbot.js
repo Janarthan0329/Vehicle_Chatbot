@@ -919,6 +919,8 @@ const sendMultiStepMessage = () => {
                 chatBox.removeChild(loadingIndicator);
         
                 if (data.status === "success") {
+                    state.vehicleName = message;
+                    
                     const botMessage = document.createElement('div');
                     botMessage.className = 'chat-message bot';
                 
@@ -1173,6 +1175,31 @@ function handleOptionSelection(option) {
         `;
         chatBox.appendChild(botMessage);
         chatBox.scrollTop = chatBox.scrollHeight;
+    
+        // Send the recommendation to the backend
+        if (state.vehicleName) {
+            fetch('/update_recommendation/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                },
+                body: JSON.stringify({ vehicle_name: state.vehicleName }) // Send the vehicle name
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    console.log("Recommendation updated successfully.");
+                } else {
+                    console.error("Failed to update recommendation:", data.message);
+                }
+            })
+            .catch(error => {
+                console.error("Error updating recommendation:", error);
+            });
+        } else {
+            console.error("Vehicle name is not set in the state.");
+        }
     } else if (option === "👎 No") {
         // Handle "No" response
         const botMessage = document.createElement('div');

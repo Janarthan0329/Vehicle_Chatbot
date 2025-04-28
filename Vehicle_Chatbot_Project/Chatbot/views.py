@@ -14,6 +14,7 @@ from sentence_transformers import SentenceTransformer
 from .Vehicle_Chatbot1 import handle_interaction, query_vehicle_data
 from .recomendation_engine import compare, get_vehicle_specifications, calculate_finance_details, get_seller_info
 from .utils import load_vehicle_data
+from .database_handler import store_vehicle
 
 
 # Load the dataset globally
@@ -225,6 +226,39 @@ def restart_server(request):
         except Exception as e:
             return JsonResponse({"status": "error", "message": f"Failed to restart server: {str(e)}"})
     return JsonResponse({"status": "error", "message": "Invalid request method. Please use POST."})
+
+
+
+
+@csrf_exempt
+def update_recommendation(request):
+    """
+    Updates the recommendation score for a vehicle.
+    """
+    if request.method == "POST":
+        try:
+            # Parse the JSON request body
+            data = json.loads(request.body)
+            vehicle_name = data.get("vehicle_name")
+
+            if not vehicle_name:
+                return JsonResponse({"status": "error", "message": "Vehicle name is required."})
+
+            
+            excel_file_path = "./Chatbot/data/vehicles_augmented.xlsx"
+            
+            # Call the store_vehicle function to update the recommendation score
+            store_vehicle(vehicle_name, excel_file_path)
+            
+
+            logger.info(f"Recommendation score updated for vehicle: {vehicle_name}")
+
+            return JsonResponse({"status": "success", "message": "Recommendation score updated successfully."})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": f"An error occurred: {str(e)}"})
+    else:
+        return JsonResponse({"status": "error", "message": "Invalid request method."})
+
 
 
 @csrf_exempt
