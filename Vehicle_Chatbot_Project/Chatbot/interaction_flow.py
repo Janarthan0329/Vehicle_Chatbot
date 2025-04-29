@@ -3,8 +3,28 @@ from .database_handler import  store_vehicle
 
 user_state = {}
 
+# Add semantic greeting responses
+greeting_responses = {
+    "hi": "Hello! How can I assist you today? 😊 Just type 'Let's start'.",
+    "hello": "Hi there! What can I help you with? 👋 Just type 'Let's start'.",
+    "hey": "Hey! Ready to find your perfect vehicle? 🚗 Just type 'Let's start'.",
+    "good morning": "Good morning! How can I make your day better? ☀️ Just type 'Let's start'.",
+    "good afternoon": "Good afternoon! What vehicle are you looking for? 🌞 Just type 'Let's start'.",
+    "good evening": "Good evening! Let's find your dream ride. 🌙 Just type 'Let's start'."
+}
+
 def handle_interaction(query, user_id, df):
     global user_state
+
+    # Handle semantic greetings
+    if query.strip().lower() in greeting_responses:
+        return {"status": "success", "response": greeting_responses[query.strip().lower()]}
+
+    # Handle "Let's Start" as the starting prompt
+    if query.strip().lower() == "Let's start":
+        if user_id not in user_state:
+            user_state[user_id] = {"step": 0, "preferences": {}}
+        return handle_interaction("step_0", user_id, df)
 
     # Check if the user wants to start over
     if query.strip().lower() == "start over":
@@ -305,4 +325,4 @@ def reset_interaction(user_id):
     global user_state
     if user_id in user_state:
         user_state[user_id] = {"step": 0, "preferences": {}}
-    return {"status": "success", "response": "Just Say Hi to start over!"}
+    return {"status": "success", "response": "Just Say 'Let's go' to start over!"}

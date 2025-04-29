@@ -121,7 +121,7 @@ def build_faiss_index():
 def semantic_query(query, df=None):
     """
     Performs a semantic query using FAISS or specific logic for predefined queries.
-    Returns a single vehicle that best matches the query.
+    Returns a single vehicle that best matches the query when user ask in singular(vehicle) and list set of vehicles when user query is plural (vehicles).
     """
     global faiss_index, vehicle_data
 

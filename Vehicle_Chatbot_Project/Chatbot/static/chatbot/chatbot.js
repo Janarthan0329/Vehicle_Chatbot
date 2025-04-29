@@ -994,7 +994,7 @@ const sendMultiStepMessage = () => {
                 } else {
                     const botMessage = document.createElement('div');
                     botMessage.className = 'chat-message bot';
-                    botMessage.textContent = data.message || 'Sorry, I could not process your request.';
+                    botMessage.textContent = data.message || 'Sorry, I could not process your request. Just type "start over" to restart.';
                     chatBox.appendChild(botMessage);
                 }
         
@@ -1093,7 +1093,7 @@ const sendMultiStepMessage = () => {
                 } else {
                     const botMessage = document.createElement('div');
                     botMessage.className = 'chat-message bot';
-                    botMessage.textContent = data.message || 'Sorry, I could not process your request.';
+                    botMessage.textContent = data.message || 'Sorry, I could not process your request. Just type "start over" to restart.';
                     chatBox.appendChild(botMessage);
                 }
 
