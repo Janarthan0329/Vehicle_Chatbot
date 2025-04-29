@@ -14,7 +14,7 @@ from sentence_transformers import SentenceTransformer
 from .Vehicle_Chatbot1 import handle_interaction, query_vehicle_data
 from .recomendation_engine import compare, get_vehicle_specifications, calculate_finance_details, get_seller_info
 from .utils import load_vehicle_data
-from .database_handler import store_vehicle
+from .database_handler import store_vehicle, semantic_query
 
 
 # Load the dataset globally
@@ -213,22 +213,6 @@ ________________________________________
 
 
 
-@csrf_exempt
-def restart_server(request):
-    """
-    Django view to restart the server.
-    """
-    if request.method == "POST":
-        try:
-            # Restart the Django server
-            os.system("python manage.py runserver")
-            return JsonResponse({"status": "success", "message": "Server restarted successfully."})
-        except Exception as e:
-            return JsonResponse({"status": "error", "message": f"Failed to restart server: {str(e)}"})
-    return JsonResponse({"status": "error", "message": "Invalid request method. Please use POST."})
-
-
-
 
 @csrf_exempt
 def update_recommendation(request):
@@ -258,6 +242,46 @@ def update_recommendation(request):
             return JsonResponse({"status": "error", "message": f"An error occurred: {str(e)}"})
     else:
         return JsonResponse({"status": "error", "message": "Invalid request method."})
+
+
+
+
+
+
+@csrf_exempt
+def semantic_query_view(request):
+    """
+    Handles semantic queries and returns relevant data from the database.
+    """
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            query = data.get("query")
+
+            if not query:
+                return JsonResponse({"status": "error", "message": "Query is required."})
+
+            # Perform semantic query
+            retrieved_data = semantic_query(query)
+
+            if not retrieved_data:
+                return JsonResponse({"status": "error", "message": "No relevant data found for your query."})
+
+            # Return only important columns
+            important_columns = ["brand", "model", "price", "year", "mileage"]
+            filtered_data = [
+                {key: row[key] for key in important_columns if key in row}
+                for row in retrieved_data
+            ]
+
+            return JsonResponse({"status": "success", "response": "Here are the results:", "data": retrieved_data})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": f"An error occurred: {str(e)}"})
+    else:
+        return JsonResponse({"status": "error", "message": "Invalid request method."})
+
+
+
 
 
 

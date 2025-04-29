@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import vehicle_query_view, default_chatbot_view, home_view, get_vehicle_table_view, filter_vehicles_view, compare_vehicles_view, price_recommendations_view, vehicle_specifications_view, multi_step_interaction_view, compare_view, specifications_view, financial_options_view, choose_vehicle_view, restart_server, update_recommendation
+from .views import vehicle_query_view, default_chatbot_view, home_view, get_vehicle_table_view, filter_vehicles_view, compare_vehicles_view, price_recommendations_view, vehicle_specifications_view, multi_step_interaction_view, compare_view, specifications_view, financial_options_view, choose_vehicle_view, update_recommendation, semantic_query_view
 
 urlpatterns = [
     # path('query/', vehicle_query_view, name='vehicle_query'),
@@ -19,6 +19,6 @@ urlpatterns = [
     path('specifications/', specifications_view, name='specifications'),
     path('financial_options/', financial_options_view, name='financial_options'),
     path('choose_vehicle/', choose_vehicle_view, name='choose_vehicle'),
-    path('restart_server/', restart_server, name='restart_server'),
     path('update_recommendation/', update_recommendation, name='update_recommendation'),
+    path('semantic_query/', semantic_query_view, name='semantic_query'),
 ]

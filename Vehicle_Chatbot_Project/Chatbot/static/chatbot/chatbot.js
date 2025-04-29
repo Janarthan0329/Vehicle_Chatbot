@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Fourth welcome message
     const message4 = document.createElement('div');
     message4.className = 'chat-message bot';
-    message4.innerHTML = "Just type <a href='#' id='options-link' style='color: yellow; font-size: 1.2em; text-decoration: none;'>'Options'</a> anywhere and Click 'Send' button to access easy options to get started!";
+    message4.innerHTML = "Just type <a href='#' id='options-link' style='color: yellow; font-size: 1.2em; text-decoration: none;'>'Options'</a> anywhere and Click 'Send' button to access easy options to get started! <br> Or you can type <a href='#' style='color: yellow; font-size: 1.2em; text-decoration: none;'>'start over'</a> anywhere and Click 'Send' button to reset the conversation.";
     chatBox.appendChild(message4);
 
     // Add event listener to the hyperlink
@@ -718,14 +718,10 @@ const sendMultiStepMessage = () => {
 
         // Handle "start over" command
         if (message.toLowerCase() === "start over") {
-            // Clear the chat
-            chatBox.innerHTML = '';
-
-            // Display loading indicator
-            const loadingIndicator = document.createElement('div');
-            loadingIndicator.className = 'loading-indicator';
-            loadingIndicator.textContent = 'Restarting...';
-            chatBox.appendChild(loadingIndicator);
+            // Display a bot message indicating the interaction is restarting
+            const botMessage = document.createElement('div');
+            botMessage.className = 'chat-message bot';
+            chatBox.appendChild(botMessage);
 
             chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -733,8 +729,44 @@ const sendMultiStepMessage = () => {
             currentStep = "default";
             state.vehicleName = null;
 
-            // Restart the Django server
-            restartDjangoServer();
+            // Send a request to the backend to reset the interaction flow
+            fetch('/multi_step_interaction/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                },
+                body: JSON.stringify({ query: "start over", user_id: 'default_user' }) // Replace 'default_user' with dynamic user ID if needed
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    // Display the response from the backend
+                    const restartMessage = document.createElement('div');
+                    restartMessage.className = 'chat-message bot';
+                    restartMessage.textContent = data.response;
+                    chatBox.appendChild(restartMessage);
+
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                } else {
+                    const errorMessage = document.createElement('div');
+                    errorMessage.className = 'chat-message bot';
+                    errorMessage.textContent = data.message || 'An error occurred while restarting the interaction.';
+                    chatBox.appendChild(errorMessage);
+
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'chat-message bot';
+                errorMessage.textContent = 'An error occurred. Please try again later.';
+                chatBox.appendChild(errorMessage);
+
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
 
             return;
         }
@@ -750,6 +782,20 @@ const sendMultiStepMessage = () => {
             return;
         }
 
+        // Handle "recommend me" command
+        if (message.toLowerCase() === "recommend me") {
+            // Respond to the "recommend me" command
+            const botMessage = document.createElement('div');
+            botMessage.className = 'chat-message bot';
+            botMessage.textContent = "Ask me questions related to recommendations.";
+            chatBox.appendChild(botMessage);
+
+            // Set the current step to "semantic_query"
+            currentStep = "semantic_query";
+
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return;
+        }
 
         // Add loading indicator
         const loadingIndicator = document.createElement('div');
@@ -852,6 +898,8 @@ const sendMultiStepMessage = () => {
                 botMessage.className = 'chat-message bot';
                 botMessage.textContent = "Please provide the installment months (e.g., 12, 24, 36, 48).";
                 chatBox.appendChild(botMessage);
+
+                chatBox.scrollTop = chatBox.scrollHeight;
             } else {
                 // Send the vehicle name and installment months to the backend
                 fetch('/financial_options/', {
@@ -961,6 +1009,57 @@ const sendMultiStepMessage = () => {
                 botMessage.textContent = 'An error occurred. Please try again later.';
                 chatBox.appendChild(botMessage);
             });
+        } else if (currentStep === "semantic_query") {
+            // Handle semantic queries
+            fetch('/semantic_query/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                },
+                body: JSON.stringify({ query: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Safely remove the loading indicator if it exists
+                if (loadingIndicator && loadingIndicator.parentNode) {
+                    chatBox.removeChild(loadingIndicator);
+                }
+
+                if (data.status === "success" && data.data && data.data.length > 0) {
+                    // Display the bot's response
+                    const botMessage = document.createElement('div');
+                    botMessage.className = 'chat-message bot';
+                    botMessage.textContent = data.response;
+                    chatBox.appendChild(botMessage);
+
+                    // Render the database table with the results
+                    renderDatabaseTable(data.data);
+                } else {
+                    // Display a user-friendly message if no vehicles are found
+                    const botMessage = document.createElement('div');
+                    botMessage.className = 'chat-message bot';
+                    botMessage.textContent = data.message || 'Sorry, no vehicles were found matching your query.';
+                    chatBox.appendChild(botMessage);
+                }
+
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+
+                // Safely remove the loading indicator if it exists
+                if (loadingIndicator && loadingIndicator.parentNode) {
+                    chatBox.removeChild(loadingIndicator);
+                }
+
+                const botMessage = document.createElement('div');
+                botMessage.className = 'chat-message bot';
+                botMessage.textContent = 'An error occurred. Please try again later.';
+                chatBox.appendChild(botMessage);
+
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
         } else {
             // Send the message to the multi-step interaction endpoint
             fetch('/multi_step_interaction/', {
@@ -1017,31 +1116,6 @@ const sendMultiStepMessage = () => {
             chatBox.scrollTop = chatBox.scrollHeight;
         }
     }
-};
-
-const restartDjangoServer = () => {
-    fetch('/restart_server/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken(),
-        },
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === "success") {
-            console.log("Django server restarted successfully.");
-            // Refresh the page after the server restarts
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
-        } else {
-            console.error("Failed to restart Django server:", data.message);
-        }
-    })
-    .catch(error => {
-        console.error("Error restarting Django server:", error);
-    });
 };
 
 
@@ -1170,6 +1244,7 @@ function handleOptionSelection(option) {
         botMessage.className = 'chat-message bot';
         botMessage.innerHTML = `
             🎉 Thank you for your feedback! I'm glad I could help.<br>
+            Also I can provide you most recommended vehicle details. just type "recommend me"<br>
             If you’d like to search again, just type "start over" anytime.<br>
             Have a smooth ride ahead! 🚗✨
         `;
@@ -1204,11 +1279,57 @@ function handleOptionSelection(option) {
         // Handle "No" response
         const botMessage = document.createElement('div');
         botMessage.className = 'chat-message bot';
-        botMessage.textContent = "I'm sorry to hear that. Let me know how I can assist you further. Just type \"start over\" anytime. Have a smooth ride ahead! 🚗✨";
+        botMessage.innerHTML = `
+        "I'm sorry to hear that.<br> 
+        I can provide you most recommended vehicle details. just type \"recommend me\".<br> 
+        Let me know how I can assist you further.<br> If you’d like to search again, just type \"start over\" anytime.<br> 
+        Have a smooth ride ahead! 🚗✨"`;
+        
         chatBox.appendChild(botMessage);
         chatBox.scrollTop = chatBox.scrollHeight;
-    }
+    } 
 }
+
+
+
+function renderDatabaseTable(data) {
+    const chatBox = document.getElementById('chat-box');
+
+    const table = document.createElement('table');
+    table.className = 'database-table';
+
+    // Define the important columns to display
+    const importantColumns = ['Brand', 'Model', 'Price', 'Year', 'Mileage'];
+
+    // Create table header
+    const headerRow = document.createElement('tr');
+    importantColumns.forEach(header => {
+        const th = document.createElement('th');
+        th.textContent = header;
+        headerRow.appendChild(th);
+    });
+    table.appendChild(headerRow);
+
+    // Populate table rows with data
+    data.forEach(row => {
+        const dataRow = document.createElement('tr');
+        importantColumns.forEach(key => {
+            const td = document.createElement('td');
+            td.textContent = row[key.toLowerCase()] || 'N/A'; 
+            dataRow.appendChild(td);
+        });
+        table.appendChild(dataRow);
+    });
+
+    // Append the table to the chat box
+    const botResponse = document.createElement('div');
+    botResponse.className = 'chat-message bot';
+    botResponse.appendChild(table);
+    chatBox.appendChild(botResponse);
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
 
 
 function renderComparisonTable(comparison) {

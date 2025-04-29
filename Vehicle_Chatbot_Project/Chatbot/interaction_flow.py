@@ -6,6 +6,10 @@ user_state = {}
 def handle_interaction(query, user_id, df):
     global user_state
 
+    # Check if the user wants to start over
+    if query.strip().lower() == "start over":
+        return reset_interaction(user_id)
+    
     # Initialize user state if not present
     if user_id not in user_state:
         user_state[user_id] = {"step": 0, "preferences": {}}
@@ -23,6 +27,8 @@ def handle_interaction(query, user_id, df):
         state["step"] += 1
         return {"status": "success", "response": "Great! Please type the brand you're interested in."}
 
+
+
     # Step 3: Capture brand and ask for fuel type
     if state["step"] == 2:
         state["preferences"]["brand"] = query.strip()
@@ -33,7 +39,7 @@ def handle_interaction(query, user_id, df):
     if state["step"] == 3:
         state["preferences"]["fuel_type"] = query.strip()
         state["step"] += 1
-        return {"status": "success", "response": "Thanks! And how many seats do you need?"}
+        return {"status": "success", "response": "Thanks! And how many seats do you need? (e.g., bike - 1 or 2, Car - 3, 4, 5, 6, 7)"}
 
     # Step 5: Capture seat capacity and recommend vehicles
     if state["step"] == 4:
@@ -75,7 +81,7 @@ def handle_interaction(query, user_id, df):
             if filtered_df.empty:
                 return {
                     "status": "success",
-                    "response": "No vehicles match your preferences. Would you like to adjust your criteria?"
+                    "response": "No vehicles match your preferences. Please adjust your criteria. (brand, fuel type, or seat capacity)"
                 }
 
             vehicles = []
@@ -181,6 +187,8 @@ def handle_interaction(query, user_id, df):
         state["step"] += 1
         return {"status": "success", "response": "Please provide the installment months (e.g., 12, 24, 36, 48)."}
 
+
+    # Step 10: Installment months
     if state["step"] == 11:
         try:
             installment_months = int(query.strip())
@@ -208,11 +216,15 @@ def handle_interaction(query, user_id, df):
             return {"status": "error", "response": "Invalid input. Please provide a valid number for installment months."}
     
     
+    
+    # Step 11: Choose a vehicle
     if state["step"] == 12:
         if query.lower() == "✅ choose a vehicle":
             state["step"] += 1
             return {"status": "success", "response": "Please provide your final vehicle choice to buy (e.g., 'Honda BR-V VTi-S')."}
 
+
+    # Step 12: Seller info
     if state["step"] == 13:
         vehicle_name = query.strip()
         result = get_seller_info(vehicle_name, df)
@@ -236,6 +248,7 @@ def handle_interaction(query, user_id, df):
         return {"status": "success", "response": response}
 
 
+    # Step 14: Recommendation feedback stored in the database
     if state["step"] == 14:
         if query.strip().lower() == "yes":
             # Path to the Excel file
@@ -250,3 +263,46 @@ def handle_interaction(query, user_id, df):
                 return {"status": "error", "response": "No vehicle selected to recommend."}
 
         return {"status": "success", "response": "Thank you for your feedback!"}
+
+
+
+    # Load the Flan-T5 model and tokenizer
+    model_name = "google/flan-t5-base"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+
+    # Step 15: Handle "recommend me" and semantic queries
+    if state["step"] == 15:
+        if query.strip().lower() == "recommend me":
+            # Respond to "recommend me" command
+            return {"status": "success", "response": "Ask me questions related to recommendations."}
+        
+        # Perform semantic query
+        retrieved_data = semantic_query(query, df)
+
+        if not retrieved_data:
+            return {"status": "error", "response": "No relevant data found for your query."}
+
+        # Build prompt for the LLM
+        prompt = "You are a vehicle recommendation assistant. Answer the user's question based on the following data:\n\n"
+        for i, item in enumerate(retrieved_data):
+            prompt += f"Vehicle {i+1}: {item}\n"
+        prompt += f"\nUser's question: {query}\nAnswer:"
+
+        # Generate response using Flan-T5
+        inputs = tokenizer(prompt, return_tensors="pt", max_length=512, truncation=True)
+        outputs = model.generate(inputs.input_ids, max_length=150, num_beams=2, early_stopping=True)
+        answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+        return {"status": "success", "response": answer, "retrieved_data": retrieved_data}
+    
+
+
+def reset_interaction(user_id):
+    """
+    Resets the interaction flow for the given user ID.
+    """
+    global user_state
+    if user_id in user_state:
+        user_state[user_id] = {"step": 0, "preferences": {}}
+    return {"status": "success", "response": "Just Say Hi to start over!"}
