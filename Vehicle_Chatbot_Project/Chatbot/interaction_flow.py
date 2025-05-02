@@ -101,7 +101,7 @@ def handle_interaction(query, user_id, df):
             if filtered_df.empty:
                 return {
                     "status": "success",
-                    "response": "No vehicles match your preferences. Please adjust your criteria. (brand, fuel type, or seat capacity)"
+                    "response": "No vehicles match your preferences. Please adjust your criteria. (brand, fuel type, or seat capacity) or just say 'start over'."
                 }
 
             vehicles = []
